@@ -10,8 +10,11 @@ Events
 
 const Canvas = require("canvas");
 
+
 // 폰트 등록
-Canvas.registerFont("./assets/font.ttf", { family: "NotoSansKR" });
+Canvas.registerFont("./assets/SUIT-Regular.ttf", { family: "SUIT" });
+Canvas.registerFont("./assets/SUIT-Bold.ttf", { family: "SUITB" });
+
 
 const client = new Client({
 intents: [
@@ -20,9 +23,11 @@ GatewayIntentBits.GuildMembers
 ]
 });
 
+
 client.once("ready", () => {
 console.log(`✅ 로그인됨: ${client.user.tag}`);
 });
+
 
 client.on("guildMemberAdd", async (member) => {
 
@@ -35,116 +40,117 @@ c => c.name === "어서오세요"
 if (!channel) return;
 
 
-// 🎨 캔버스
+// 캔버스
 const canvas = Canvas.createCanvas(1600, 800);
 const ctx = canvas.getContext("2d");
 
 
-// 🌌 배경
+// 배경
 const background = await Canvas.loadImage("./assets/background.png");
 ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
 
-// 🧊 프레임
+// 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
 
-const frameWidth = 1500;
-const frameHeight = 650;
+const frameWidth = 1400;
+const frameHeight = 600;
 
 const frameX = (canvas.width - frameWidth) / 2;
-const frameY = (canvas.height - frameHeight) / 2 + 20;
+const frameY = (canvas.height - frameHeight) / 2;
 
 ctx.drawImage(frame, frameX, frameY, frameWidth, frameHeight);
 
 
-// 🔰 로고
+// 로고
 const logo = await Canvas.loadImage("./assets/logo.png");
-ctx.drawImage(logo, canvas.width / 2 - 100, frameY - 90, 200, 100);
+
+ctx.drawImage(
+logo,
+canvas.width / 2 - 90,
+frameY - 80,
+180,
+90
+);
 
 
-// 👤 아바타
+// 아바타
 const avatar = await Canvas.loadImage(
 member.user.displayAvatarURL({ extension: "png", size: 256 })
 );
 
+const avatarX = frameX + 170;
+const avatarY = frameY + frameHeight / 2;
+
 ctx.save();
 ctx.beginPath();
-ctx.arc(frameX + 220, canvas.height / 2, 140, 0, Math.PI * 2);
+ctx.arc(avatarX, avatarY, 120, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
-
-ctx.drawImage(
-avatar,
-frameX + 80,
-canvas.height / 2 - 140,
-280,
-280
-);
-
+ctx.drawImage(avatar, avatarX - 120, avatarY - 120, 240, 240);
 ctx.restore();
 
 
-// ✏️ 텍스트
+// 텍스트 위치
+const textX = avatarX + 200;
+const titleY = avatarY - 70;
+
+
+// 닉네임 (굵게)
 ctx.fillStyle = "#ffffff";
+ctx.font = "52px SUITB";
+ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, titleY);
 
-ctx.font = "bold 60px NotoSansKR";
-ctx.fillText(
-`${member.user.username}님 안녕하세요!`,
-frameX + 380,
-frameY + 220
-);
 
-ctx.font = "42px NotoSansKR";
-ctx.fillText(
-"707 서버에 오신걸 환영합니다",
-frameX + 380,
-frameY + 300
-);
+// 환영문
+ctx.font = "34px SUIT";
+ctx.fillText(`707 서버에 오신걸 환영합니다`, textX, titleY + 70);
 
-ctx.font = "32px NotoSansKR";
+
+// 정보 텍스트
+ctx.font = "26px SUIT";
 
 ctx.fillText(
 `ID : ${member.user.id}`,
-frameX + 380,
-frameY + 390
+textX,
+titleY + 150
 );
 
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
-frameX + 380,
-frameY + 440
+textX,
+titleY + 190
 );
 
 ctx.fillText(
 `서버 가입 : ${new Date().toLocaleDateString()}`,
-frameX + 380,
-frameY + 490
+textX,
+titleY + 230
 );
 
 
-// 📦 이미지 생성
+// 파일 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
 name: "welcome.png"
 });
 
 
-// 🎮 역할 버튼
+// 버튼
 const row = new ActionRowBuilder().addComponents(
 
 new ButtonBuilder()
-.setCustomId(`mercenary_${member.id}`)
+.setCustomId("mercenary")
 .setLabel("⚔️ 용병")
 .setStyle(ButtonStyle.Primary),
 
 new ButtonBuilder()
-.setCustomId(`guest_${member.id}`)
+.setCustomId("guest")
 .setLabel("👤 손님")
 .setStyle(ButtonStyle.Secondary)
 
 );
 
 
-// 📩 메시지 전송
 channel.send({
 content: `${member} 님 환영합니다!\n역할을 먼저 선택해주세요.`,
 files: [attachment],
@@ -154,29 +160,16 @@ components: [row]
 });
 
 
-// 🎮 버튼 이벤트
+// 버튼 처리
 client.on(Events.InteractionCreate, async interaction => {
 
 if (!interaction.isButton()) return;
-
-const [roleType, userId] = interaction.customId.split("_");
-
-if (interaction.user.id !== userId) {
-
-return interaction.reply({
-content: "❌ 본인만 역할을 선택할 수 있습니다.",
-ephemeral: true
-});
-
-}
 
 const applyChannel = interaction.guild.channels.cache.find(
 c => c.name === "가입신청서"
 );
 
-
-// ⚔️ 용병
-if (roleType === "mercenary") {
+if (interaction.customId === "mercenary") {
 
 const role = interaction.guild.roles.cache.find(
 r => r.name === "용병"
@@ -188,12 +181,10 @@ await interaction.reply({
 content: `⚔️ 용병 역할이 지급되었습니다!\n${applyChannel}`,
 ephemeral: true
 });
-
 }
 
 
-// 👤 손님
-if (roleType === "guest") {
+if (interaction.customId === "guest") {
 
 const role = interaction.guild.roles.cache.find(
 r => r.name === "손님"
@@ -205,7 +196,6 @@ await interaction.reply({
 content: `👤 손님 역할이 지급되었습니다!\n${applyChannel}`,
 ephemeral: true
 });
-
 }
 
 });
