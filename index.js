@@ -24,13 +24,19 @@ client.once("ready", () => {
 console.log(`✅ 로그인됨: ${client.user.tag}`);
 });
 
+
+// 🔥 채널 ID 설정
+const WELCOME_CHANNEL_ID = "1462183277635830027";
+const APPLY_CHANNEL_ID = "1462180691713458289";
+
+
 client.on("guildMemberAdd", async (member) => {
 
 if (member.user.bot) return;
 
-const channel = member.guild.channels.cache.find(
-c => c.name === "어서오세요"
-);
+
+// 환영 채널
+const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
 
 if (!channel) return;
 
@@ -45,7 +51,7 @@ const background = await Canvas.loadImage("./assets/background.png");
 ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
 
-// 프레임 위치
+// 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
 
 const frameWidth = 1500;
@@ -62,7 +68,7 @@ const logo = await Canvas.loadImage("./assets/logo.png");
 
 ctx.drawImage(
 logo,
-canvas.width / 2 - 150,
+canvas.width / 2 - 180,
 frameY - 110,
 360,
 180
@@ -137,7 +143,7 @@ ctx.strokeText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 
 
-// 정보 텍스트
+// 정보
 ctx.font = "30px SUITB";
 ctx.fillStyle = "#f5f5ff";
 
@@ -169,7 +175,7 @@ textY + 230
 );
 
 
-// 카드 이미지 생성
+// 이미지 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
 name: "welcome.png"
 });
@@ -213,7 +219,7 @@ if (!interaction.isButton()) return;
 const [roleType, userId] = interaction.customId.split("_");
 
 
-// 새 유저만 클릭 가능
+// 새 유저만 사용
 if (interaction.user.id !== userId) {
 return interaction.reply({
 content: "❌ 이 버튼은 새로 들어온 사용자만 사용할 수 있습니다.",
@@ -222,7 +228,7 @@ ephemeral: true
 }
 
 
-// 역할 이름
+// 역할
 let roleName = "";
 
 if (roleType === "mercenary") roleName = "용병";
@@ -240,7 +246,7 @@ ephemeral: true
 }
 
 
-// 이미 역할 선택 확인
+// 이미 선택
 const rolesToCheck = ["용병","손님","가입대기자"];
 
 for (const r of rolesToCheck) {
@@ -276,9 +282,7 @@ components: [disabledRow]
 
 
 // 신청서 채널
-const applyChannel = interaction.guild.channels.cache.find(
-c => c.name === "가입신청서"
-);
+const applyChannel = interaction.guild.channels.cache.get(APPLY_CHANNEL_ID);
 
 
 // 가입대기자 안내
