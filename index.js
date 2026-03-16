@@ -10,11 +10,8 @@ Events
 
 const Canvas = require("canvas");
 
-
-// 폰트 등록
 Canvas.registerFont("./assets/SUIT-Regular.ttf", { family: "SUIT" });
 Canvas.registerFont("./assets/SUIT-Bold.ttf", { family: "SUITB" });
-
 
 const client = new Client({
 intents: [
@@ -23,11 +20,9 @@ GatewayIntentBits.GuildMembers
 ]
 });
 
-
 client.once("ready", () => {
 console.log(`✅ 로그인됨: ${client.user.tag}`);
 });
-
 
 client.on("guildMemberAdd", async (member) => {
 
@@ -40,7 +35,7 @@ c => c.name === "어서오세요"
 if (!channel) return;
 
 
-// 캔버스
+// 캔버스 생성
 const canvas = Canvas.createCanvas(1600, 800);
 const ctx = canvas.getContext("2d");
 
@@ -53,8 +48,8 @@ ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 // 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
 
-const frameWidth = 1400;
-const frameHeight = 600;
+const frameWidth = 1500;
+const frameHeight = 650;
 
 const frameX = (canvas.width - frameWidth) / 2;
 const frameY = (canvas.height - frameHeight) / 2;
@@ -79,53 +74,68 @@ const avatar = await Canvas.loadImage(
 member.user.displayAvatarURL({ extension: "png", size: 256 })
 );
 
-const avatarX = frameX + 170;
+const avatarSize = 230;
+
+const avatarX = frameX + 260;
 const avatarY = frameY + frameHeight / 2;
 
 ctx.save();
 ctx.beginPath();
-ctx.arc(avatarX, avatarY, 120, 0, Math.PI * 2);
+ctx.arc(avatarX, avatarY, avatarSize / 2, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
-ctx.drawImage(avatar, avatarX - 120, avatarY - 120, 240, 240);
+ctx.drawImage(
+avatar,
+avatarX - avatarSize / 2,
+avatarY - avatarSize / 2,
+avatarSize,
+avatarSize
+);
 ctx.restore();
 
 
+// 텍스트 그림자
+ctx.shadowColor = "rgba(0,0,0,0.6)";
+ctx.shadowBlur = 10;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 3;
+
+
 // 텍스트 위치
-const textX = avatarX + 200;
-const titleY = avatarY - 70;
+const textX = avatarX + 230;
+const textY = avatarY - 100;
 
 
-// 닉네임 (굵게)
+// 닉네임
 ctx.fillStyle = "#ffffff";
-ctx.font = "52px SUITB";
-ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, titleY);
+ctx.font = "56px SUITB";
+ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, textY);
 
 
-// 환영문
-ctx.font = "34px SUIT";
-ctx.fillText(`707 서버에 오신걸 환영합니다`, textX, titleY + 70);
+// 환영 문구
+ctx.font = "36px SUIT";
+ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 
 
 // 정보 텍스트
-ctx.font = "26px SUIT";
+ctx.font = "28px SUIT";
 
 ctx.fillText(
 `ID : ${member.user.id}`,
 textX,
-titleY + 150
+textY + 150
 );
 
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
 textX,
-titleY + 190
+textY + 190
 );
 
 ctx.fillText(
 `서버 가입 : ${new Date().toLocaleDateString()}`,
 textX,
-titleY + 230
+textY + 230
 );
 
 
@@ -182,7 +192,6 @@ content: `⚔️ 용병 역할이 지급되었습니다!\n${applyChannel}`,
 ephemeral: true
 });
 }
-
 
 if (interaction.customId === "guest") {
 
