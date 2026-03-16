@@ -196,7 +196,7 @@ new ButtonBuilder()
 
 new ButtonBuilder()
 .setCustomId(`waiting_${member.id}`)
-.setLabel("⏳ 가입대기자")
+.setLabel("⏳ 가입희망자")
 .setStyle(ButtonStyle.Success)
 
 );
@@ -233,7 +233,7 @@ let roleName = "";
 
 if (roleType === "mercenary") roleName = "용병";
 if (roleType === "guest") roleName = "손님";
-if (roleType === "waiting") roleName = "가입대기자";
+if (roleType === "waiting") roleName = "가입희망자";
 
 
 const role = interaction.guild.roles.cache.find(r => r.name === roleName);
@@ -247,7 +247,7 @@ ephemeral: true
 
 
 // 이미 선택
-const rolesToCheck = ["용병","손님","가입대기자"];
+const rolesToCheck = ["용병","손님","가입희망자"];
 
 for (const r of rolesToCheck) {
 
@@ -285,7 +285,7 @@ components: [disabledRow]
 const applyChannel = interaction.guild.channels.cache.get(APPLY_CHANNEL_ID);
 
 
-// 가입대기자 안내
+// 가입희망자 안내
 if (roleType === "waiting" && applyChannel) {
 
 await interaction.followUp({
