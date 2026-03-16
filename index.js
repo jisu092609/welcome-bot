@@ -10,7 +10,7 @@ Events
 
 const Canvas = require("canvas");
 
-Canvas.registerFont("./assets/font.ttf", { family: "Noto" });
+Canvas.registerFont("./assets/font.ttf", { family: "NotoSansKR" });
 
 const client = new Client({
 intents: [
@@ -34,28 +34,14 @@ c => c.name === "어서오세요"
 if (!channel) return;
 
 
-// Canvas
-const canvas = Canvas.createCanvas(900, 350);
+// 캔버스 생성
+const canvas = Canvas.createCanvas(1200, 600);
 const ctx = canvas.getContext("2d");
 
 
 // 배경
 const background = await Canvas.loadImage("./assets/background.png");
 ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
-
-// 프로필
-const avatar = await Canvas.loadImage(
-member.user.displayAvatarURL({ extension: "png" })
-);
-
-ctx.save();
-ctx.beginPath();
-ctx.arc(150, 175, 85, 0, Math.PI * 2);
-ctx.closePath();
-ctx.clip();
-ctx.drawImage(avatar, 65, 90, 170, 170);
-ctx.restore();
 
 
 // 프레임
@@ -65,42 +51,55 @@ ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
 
 // 로고
 const logo = await Canvas.loadImage("./assets/logo.png");
-ctx.drawImage(logo, 390, 10, 120, 60);
+ctx.drawImage(logo, 520, 20, 160, 80);
+
+
+// 유저 아바타
+const avatar = await Canvas.loadImage(
+member.user.displayAvatarURL({ extension: "png", size: 256 })
+);
+
+ctx.save();
+ctx.beginPath();
+ctx.arc(220, 300, 120, 0, Math.PI * 2);
+ctx.closePath();
+ctx.clip();
+ctx.drawImage(avatar, 100, 180, 240, 240);
+ctx.restore();
 
 
 // 텍스트
 ctx.fillStyle = "#ffffff";
 
-ctx.font = "bold 34px Noto";
-ctx.fillText(`${member.user.username}님 안녕하세요!`, 280, 150);
+ctx.font = "bold 48px NotoSansKR";
+ctx.fillText(`${member.user.username}님 안녕하세요!`, 420, 240);
 
-ctx.font = "24px Noto";
-ctx.fillText("707 서버에 오신걸 환영합니다", 280, 185);
+ctx.font = "32px NotoSansKR";
+ctx.fillText("707 서버에 오신걸 환영합니다", 420, 300);
 
-ctx.font = "18px Noto";
-
-ctx.fillText(`ID : ${member.user.id}`, 280, 230);
+ctx.font = "26px NotoSansKR";
+ctx.fillText(`ID : ${member.user.id}`, 420, 380);
 
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
-280,
-255
+420,
+420
 );
 
 ctx.fillText(
 `서버 가입 : ${new Date().toLocaleDateString()}`,
-280,
-280
+420,
+460
 );
 
 
-// 이미지 생성
+// 이미지 파일 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
 name: "welcome.png"
 });
 
 
-// 버튼
+// 역할 버튼
 const row = new ActionRowBuilder().addComponents(
 
 new ButtonBuilder()
@@ -125,16 +124,16 @@ components: [row]
 });
 
 
-// 버튼 처리
+// 버튼 이벤트
 client.on(Events.InteractionCreate, async interaction => {
 
 if (!interaction.isButton()) return;
 
-const [type, userId] = interaction.customId.split("_");
+const [roleType, userId] = interaction.customId.split("_");
 
 if (interaction.user.id !== userId) {
 return interaction.reply({
-content: "❌ 이 버튼은 해당 사용자만 사용할 수 있습니다.",
+content: "❌ 본인만 역할을 선택할 수 있습니다.",
 ephemeral: true
 });
 }
@@ -143,8 +142,7 @@ const applyChannel = interaction.guild.channels.cache.find(
 c => c.name === "가입신청서"
 );
 
-
-if (type === "mercenary") {
+if (roleType === "mercenary") {
 
 const role = interaction.guild.roles.cache.find(
 r => r.name === "용병"
@@ -159,8 +157,7 @@ ephemeral: true
 
 }
 
-
-if (type === "guest") {
+if (roleType === "guest") {
 
 const role = interaction.guild.roles.cache.find(
 r => r.name === "손님"
