@@ -82,20 +82,21 @@ const avatarY = frameY + frameHeight / 2;
 
 // 네온 테두리
 ctx.beginPath();
-ctx.arc(avatarX, avatarY, avatarSize/2 + 10, 0, Math.PI * 2);
+ctx.arc(avatarX, avatarY, avatarSize/2 + 8, 0, Math.PI * 2);
 ctx.strokeStyle = "#9c6cff";
-ctx.lineWidth = 8;
+ctx.lineWidth = 6;
 ctx.shadowColor = "#9c6cff";
-ctx.shadowBlur = 25;
+ctx.shadowBlur = 20;
 ctx.stroke();
 
 
-// 아바타 이미지
+// 아바타
 ctx.save();
 ctx.beginPath();
 ctx.arc(avatarX, avatarY, avatarSize/2, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
+
 ctx.drawImage(
 avatar,
 avatarX - avatarSize/2,
@@ -103,21 +104,8 @@ avatarY - avatarSize/2,
 avatarSize,
 avatarSize
 );
+
 ctx.restore();
-
-
-// 글래스 UI 패널
-const panelX = avatarX + 180;
-const panelY = avatarY - 140;
-const panelWidth = 700;
-const panelHeight = 260;
-
-ctx.fillStyle = "rgba(255,255,255,0.08)";
-ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-
-ctx.strokeStyle = "rgba(255,255,255,0.15)";
-ctx.lineWidth = 2;
-ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
 
 // 텍스트 그림자
@@ -128,8 +116,8 @@ ctx.shadowOffsetY = 3;
 
 
 // 텍스트 위치
-const textX = panelX + 40;
-const textY = panelY + 70;
+const textX = avatarX + 250;
+const textY = avatarY - 100;
 
 
 // 닉네임
@@ -140,7 +128,7 @@ ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, textY);
 
 // 환영문
 ctx.font = "36px SUIT";
-ctx.fillText("707 클랜에 방문하신걸 환영합니다!", textX, textY + 60);
+ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 
 
 // 정보
@@ -149,23 +137,23 @@ ctx.font = "28px SUIT";
 ctx.fillText(
 `ID : ${member.user.id}`,
 textX,
-textY + 130
+textY + 150
 );
 
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
 textX,
-textY + 170
+textY + 190
 );
 
 ctx.fillText(
 `서버 가입 : ${new Date().toLocaleDateString()}`,
 textX,
-textY + 210
+textY + 230
 );
 
 
-// 파일 생성
+// 이미지 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
 name: "welcome.png"
 });
@@ -175,14 +163,19 @@ name: "welcome.png"
 const row = new ActionRowBuilder().addComponents(
 
 new ButtonBuilder()
-.setCustomId("mercenary")
+.setCustomId(`mercenary_${member.id}`)
 .setLabel("⚔️ 용병")
 .setStyle(ButtonStyle.Primary),
 
 new ButtonBuilder()
-.setCustomId("guest")
+.setCustomId(`guest_${member.id}`)
 .setLabel("👤 손님")
-.setStyle(ButtonStyle.Secondary)
+.setStyle(ButtonStyle.Secondary),
+
+new ButtonBuilder()
+.setCustomId(`waiting_${member.id}`)
+.setLabel("⏳ 가입대기자")
+.setStyle(ButtonStyle.Success)
 
 );
 
@@ -201,36 +194,87 @@ client.on(Events.InteractionCreate, async interaction => {
 
 if (!interaction.isButton()) return;
 
-const applyChannel = interaction.guild.channels.cache.find(
-c => c.name === "가입신청서"
-);
+const [roleType, userId] = interaction.customId.split("_");
 
-if (interaction.customId === "mercenary") {
 
-const role = interaction.guild.roles.cache.find(
-r => r.name === "용병"
-);
+// 해당 유저만 클릭 가능
+if (interaction.user.id !== userId) {
 
-if (role) await interaction.member.roles.add(role);
+return interaction.reply({
+content: "❌ 이 버튼은 새로 들어온 사용자만 사용할 수 있습니다.",
+ephemeral: true
+});
 
-await interaction.reply({
-content: `⚔️ 용병 역할이 지급되었습니다!\n${applyChannel}`,
+}
+
+
+// 역할 이름
+let roleName = "";
+
+if (roleType === "mercenary") roleName = "용병";
+if (roleType === "guest") roleName = "손님";
+if (roleType === "waiting") roleName = "가입대기자";
+
+
+const role = interaction.guild.roles.cache.find(r => r.name === roleName);
+
+if (!role) {
+return interaction.reply({
+content: "❌ 역할을 찾을 수 없습니다.",
 ephemeral: true
 });
 }
 
-if (interaction.customId === "guest") {
 
-const role = interaction.guild.roles.cache.find(
-r => r.name === "손님"
-);
+// 이미 역할 선택했는지 확인
+const rolesToCheck = ["용병", "손님", "가입대기자"];
 
-if (role) await interaction.member.roles.add(role);
+for (const r of rolesToCheck) {
 
-await interaction.reply({
-content: `👤 손님 역할이 지급되었습니다!\n${applyChannel}`,
+const checkRole = interaction.guild.roles.cache.find(x => x.name === r);
+
+if (checkRole && interaction.member.roles.cache.has(checkRole.id)) {
+
+return interaction.reply({
+content: "⚠️ 이미 역할을 선택했습니다.",
 ephemeral: true
 });
+
+}
+
+}
+
+
+// 역할 지급
+await interaction.member.roles.add(role);
+
+
+// 버튼 비활성화
+const disabledRow = new ActionRowBuilder().addComponents(
+interaction.message.components[0].components.map(button =>
+ButtonBuilder.from(button).setDisabled(true)
+)
+);
+
+await interaction.update({
+components: [disabledRow]
+});
+
+
+// 신청서 채널
+const applyChannel = interaction.guild.channels.cache.find(
+c => c.name === "가입신청서"
+);
+
+
+// 가입대기자 선택 시 자동 안내
+if (roleType === "waiting" && applyChannel) {
+
+await interaction.followUp({
+content: `📋 가입 신청은 여기에서 진행해주세요 → ${applyChannel}`,
+ephemeral: true
+});
+
 }
 
 });
