@@ -35,7 +35,7 @@ c => c.name === "어서오세요"
 if (!channel) return;
 
 
-// 캔버스 생성
+// 캔버스
 const canvas = Canvas.createCanvas(1600, 800);
 const ctx = canvas.getContext("2d");
 
@@ -76,22 +76,48 @@ member.user.displayAvatarURL({ extension: "png", size: 256 })
 
 const avatarSize = 230;
 
-const avatarX = frameX + 260;
+const avatarX = frameX + 340;
 const avatarY = frameY + frameHeight / 2;
 
+
+// 네온 테두리
+ctx.beginPath();
+ctx.arc(avatarX, avatarY, avatarSize/2 + 10, 0, Math.PI * 2);
+ctx.strokeStyle = "#9c6cff";
+ctx.lineWidth = 8;
+ctx.shadowColor = "#9c6cff";
+ctx.shadowBlur = 25;
+ctx.stroke();
+
+
+// 아바타 이미지
 ctx.save();
 ctx.beginPath();
-ctx.arc(avatarX, avatarY, avatarSize / 2, 0, Math.PI * 2);
+ctx.arc(avatarX, avatarY, avatarSize/2, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
 ctx.drawImage(
 avatar,
-avatarX - avatarSize / 2,
-avatarY - avatarSize / 2,
+avatarX - avatarSize/2,
+avatarY - avatarSize/2,
 avatarSize,
 avatarSize
 );
 ctx.restore();
+
+
+// 글래스 UI 패널
+const panelX = avatarX + 180;
+const panelY = avatarY - 140;
+const panelWidth = 700;
+const panelHeight = 260;
+
+ctx.fillStyle = "rgba(255,255,255,0.08)";
+ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+ctx.strokeStyle = "rgba(255,255,255,0.15)";
+ctx.lineWidth = 2;
+ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
 
 // 텍스트 그림자
@@ -102,8 +128,8 @@ ctx.shadowOffsetY = 3;
 
 
 // 텍스트 위치
-const textX = avatarX + 230;
-const textY = avatarY - 100;
+const textX = panelX + 40;
+const textY = panelY + 70;
 
 
 // 닉네임
@@ -112,30 +138,30 @@ ctx.font = "56px SUITB";
 ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, textY);
 
 
-// 환영 문구
+// 환영문
 ctx.font = "36px SUIT";
-ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
+ctx.fillText("707 클랜에 방문하신걸 환영합니다!", textX, textY + 60);
 
 
-// 정보 텍스트
+// 정보
 ctx.font = "28px SUIT";
 
 ctx.fillText(
 `ID : ${member.user.id}`,
 textX,
-textY + 150
+textY + 130
 );
 
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
 textX,
-textY + 190
+textY + 170
 );
 
 ctx.fillText(
 `서버 가입 : ${new Date().toLocaleDateString()}`,
 textX,
-textY + 230
+textY + 210
 );
 
 
