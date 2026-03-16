@@ -52,7 +52,7 @@ const frameWidth = 1500;
 const frameHeight = 650;
 
 const frameX = (canvas.width - frameWidth) / 2;
-const frameY = (canvas.height - frameHeight) / 2;
+const frameY = (canvas.height - frameHeight) / 2 + 40;
 
 ctx.drawImage(frame, frameX, frameY, frameWidth, frameHeight);
 
@@ -62,8 +62,8 @@ const logo = await Canvas.loadImage("./assets/logo.png");
 
 ctx.drawImage(
 logo,
-canvas.width / 2 - 90,
-frameY - 80,
+canvas.width / 2 - 150,
+frameY - 110,
 360,
 180
 );
