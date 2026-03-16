@@ -45,7 +45,7 @@ const background = await Canvas.loadImage("./assets/background.png");
 ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
 
-// 프레임
+// 프레임 위치
 const frame = await Canvas.loadImage("./assets/frame.png");
 
 const frameWidth = 1500;
@@ -64,8 +64,8 @@ ctx.drawImage(
 logo,
 canvas.width / 2 - 150,
 frameY - 110,
-360,
-180
+260,
+130
 );
 
 
@@ -109,8 +109,8 @@ ctx.restore();
 
 
 // 텍스트 그림자
-ctx.shadowColor = "rgba(0,0,0,0.6)";
-ctx.shadowBlur = 10;
+ctx.shadowColor = "rgba(0,0,0,0.9)";
+ctx.shadowBlur = 18;
 ctx.shadowOffsetX = 0;
 ctx.shadowOffsetY = 3;
 
@@ -121,29 +121,45 @@ const textY = avatarY - 100;
 
 
 // 닉네임
-ctx.fillStyle = "#ffffff";
 ctx.font = "56px SUITB";
+ctx.fillStyle = "#ffffff";
+ctx.strokeStyle = "rgba(0,0,0,0.6)";
+ctx.lineWidth = 2;
+
+ctx.strokeText(`${member.user.username}님 안녕하세요!`, textX, textY);
 ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, textY);
 
 
-// 환영문
-ctx.font = "36px SUIT";
+// 환영 문구
+ctx.font = "40px SUITB";
+
+ctx.strokeText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 
 
-// 정보
-ctx.font = "28px SUIT";
+// 정보 텍스트
+ctx.font = "30px SUITB";
+ctx.fillStyle = "#f5f5ff";
 
-ctx.fillText(
-`ID : ${member.user.id}`,
+ctx.strokeText(`ID : ${member.user.id}`, textX, textY + 150);
+ctx.fillText(`ID : ${member.user.id}`, textX, textY + 150);
+
+ctx.strokeText(
+`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
 textX,
-textY + 150
+textY + 190
 );
 
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
 textX,
 textY + 190
+);
+
+ctx.strokeText(
+`서버 가입 : ${new Date().toLocaleDateString()}`,
+textX,
+textY + 230
 );
 
 ctx.fillText(
@@ -153,7 +169,7 @@ textY + 230
 );
 
 
-// 이미지 생성
+// 카드 이미지 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
 name: "welcome.png"
 });
@@ -197,14 +213,12 @@ if (!interaction.isButton()) return;
 const [roleType, userId] = interaction.customId.split("_");
 
 
-// 해당 유저만 클릭 가능
+// 새 유저만 클릭 가능
 if (interaction.user.id !== userId) {
-
 return interaction.reply({
 content: "❌ 이 버튼은 새로 들어온 사용자만 사용할 수 있습니다.",
 ephemeral: true
 });
-
 }
 
 
@@ -226,8 +240,8 @@ ephemeral: true
 }
 
 
-// 이미 역할 선택했는지 확인
-const rolesToCheck = ["용병", "손님", "가입대기자"];
+// 이미 역할 선택 확인
+const rolesToCheck = ["용병","손님","가입대기자"];
 
 for (const r of rolesToCheck) {
 
@@ -267,7 +281,7 @@ c => c.name === "가입신청서"
 );
 
 
-// 가입대기자 선택 시 자동 안내
+// 가입대기자 안내
 if (roleType === "waiting" && applyChannel) {
 
 await interaction.followUp({
