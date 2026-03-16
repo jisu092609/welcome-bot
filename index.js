@@ -10,6 +10,7 @@ Events
 
 const Canvas = require("canvas");
 
+// 폰트 등록
 Canvas.registerFont("./assets/font.ttf", { family: "NotoSansKR" });
 
 const client = new Client({
@@ -34,7 +35,7 @@ c => c.name === "어서오세요"
 if (!channel) return;
 
 
-// 🎨 캔버스 (1600x800)
+// 🎨 캔버스
 const canvas = Canvas.createCanvas(1600, 800);
 const ctx = canvas.getContext("2d");
 
@@ -47,34 +48,34 @@ ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 // 🧊 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
 
-const frameWidth = 1300;
-const frameHeight = 520;
+const frameWidth = 1500;
+const frameHeight = 650;
 
 const frameX = (canvas.width - frameWidth) / 2;
-const frameY = (canvas.height - frameHeight) / 2;
+const frameY = (canvas.height - frameHeight) / 2 + 20;
 
 ctx.drawImage(frame, frameX, frameY, frameWidth, frameHeight);
 
 
 // 🔰 로고
 const logo = await Canvas.loadImage("./assets/logo.png");
-ctx.drawImage(logo, 700, frameY - 70, 200, 100);
+ctx.drawImage(logo, canvas.width / 2 - 100, frameY - 90, 200, 100);
 
 
-// 👤 유저 아바타
+// 👤 아바타
 const avatar = await Canvas.loadImage(
 member.user.displayAvatarURL({ extension: "png", size: 256 })
 );
 
 ctx.save();
 ctx.beginPath();
-ctx.arc(frameX + 180, canvas.height / 2, 140, 0, Math.PI * 2);
+ctx.arc(frameX + 220, canvas.height / 2, 140, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
 
 ctx.drawImage(
 avatar,
-frameX + 40,
+frameX + 80,
 canvas.height / 2 - 140,
 280,
 280
@@ -83,41 +84,41 @@ canvas.height / 2 - 140,
 ctx.restore();
 
 
-// 📝 텍스트
+// ✏️ 텍스트
 ctx.fillStyle = "#ffffff";
 
 ctx.font = "bold 60px NotoSansKR";
 ctx.fillText(
 `${member.user.username}님 안녕하세요!`,
-frameX + 360,
-frameY + 180
+frameX + 380,
+frameY + 220
 );
 
-ctx.font = "40px NotoSansKR";
+ctx.font = "42px NotoSansKR";
 ctx.fillText(
 "707 서버에 오신걸 환영합니다",
-frameX + 360,
-frameY + 250
+frameX + 380,
+frameY + 300
 );
 
-ctx.font = "30px NotoSansKR";
+ctx.font = "32px NotoSansKR";
 
 ctx.fillText(
 `ID : ${member.user.id}`,
-frameX + 360,
-frameY + 340
-);
-
-ctx.fillText(
-`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
-frameX + 360,
+frameX + 380,
 frameY + 390
 );
 
 ctx.fillText(
-`서버 가입 : ${new Date().toLocaleDateString()}`,
-frameX + 360,
+`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
+frameX + 380,
 frameY + 440
+);
+
+ctx.fillText(
+`서버 가입 : ${new Date().toLocaleDateString()}`,
+frameX + 380,
+frameY + 490
 );
 
 
@@ -208,6 +209,5 @@ ephemeral: true
 }
 
 });
-
 
 client.login(process.env.DISCORD_TOKEN);
