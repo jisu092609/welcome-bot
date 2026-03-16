@@ -26,7 +26,7 @@ console.log(`✅ 로그인됨: ${client.user.tag}`);
 
 
 // 🔥 채널 ID 설정
-const WELCOME_CHANNEL_ID = "1462183277635830027";
+const WELCOME_CHANNEL_ID = "1479184071761592340";
 const APPLY_CHANNEL_ID = "1462180691713458289";
 
 
