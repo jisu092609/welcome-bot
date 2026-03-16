@@ -64,8 +64,8 @@ ctx.drawImage(
 logo,
 canvas.width / 2 - 90,
 frameY - 80,
-180,
-90
+360,
+180
 );
 
 
