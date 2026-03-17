@@ -20,7 +20,8 @@ const client = new Client({
 intents: [
 GatewayIntentBits.Guilds,
 GatewayIntentBits.GuildMembers,
-GatewayIntentBits.GuildMessages
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent
 ]
 });
 
@@ -37,8 +38,25 @@ const REPORT_LOG_CHANNEL_ID = "1483510318196985856";
 const STAFF_ROLE_NAME = "707Manager";
 
 
+// ===== 한국시간 함수 =====
+
+function getKST() {
+
+const now = new Date();
+
+return now.toLocaleString("ko-KR", {
+timeZone: "Asia/Seoul",
+hour: "2-digit",
+minute: "2-digit",
+second: "2-digit",
+hour12: false
+});
+
+}
+
+
 // =========================
-// 봇 실행
+// 봇 시작
 // =========================
 
 client.once("ready", async () => {
@@ -46,21 +64,13 @@ client.once("ready", async () => {
 console.log(`✅ 로그인됨: ${client.user.tag}`);
 
 const reportChannel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
-
-if (!reportChannel) {
-console.log("❌ 제보 채널을 찾을 수 없음");
-return;
-}
-
-// 기존 버튼 메시지 제거 (중복 방지)
+if (!reportChannel) return;
 
 const messages = await reportChannel.messages.fetch({ limit: 10 });
 
 messages.forEach(msg => {
 if (msg.author.id === client.user.id) msg.delete().catch(()=>{});
 });
-
-// 새 버튼 생성
 
 const row = new ActionRowBuilder().addComponents(
 new ButtonBuilder()
@@ -73,8 +83,6 @@ reportChannel.send({
 content: "문제가 발생했거나 제보가 필요하면 버튼을 눌러주세요.",
 components: [row]
 });
-
-console.log("✅ 제보 버튼 생성 완료");
 
 });
 
@@ -212,7 +220,7 @@ components: [row]
 
 
 // =========================
-// 버튼 처리
+// 제보 시스템
 // =========================
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -222,80 +230,11 @@ if (!interaction.isButton()) return;
 const guild = interaction.guild;
 
 
-// ===== 역할 선택 =====
-
-if (
-interaction.customId.startsWith("mercenary_") ||
-interaction.customId.startsWith("guest_") ||
-interaction.customId.startsWith("waiting_")
-) {
-
-const [roleType, userId] = interaction.customId.split("_");
-
-if (interaction.user.id !== userId) {
-return interaction.reply({
-content: "❌ 이 버튼은 새로 들어온 사용자만 사용할 수 있습니다.",
-ephemeral: true
-});
-}
-
-let roleName = "";
-
-if (roleType === "mercenary") roleName = "용병";
-if (roleType === "guest") roleName = "손님";
-if (roleType === "waiting") roleName = "가입희망자";
-
-const role = guild.roles.cache.find(r => r.name === roleName);
-
-if (!role) {
-return interaction.reply({
-content: "❌ 역할을 찾을 수 없습니다.",
-ephemeral: true
-});
-}
-
-await interaction.member.roles.add(role);
-
-const disabledRow = new ActionRowBuilder().addComponents(
-interaction.message.components[0].components.map(button =>
-ButtonBuilder.from(button).setDisabled(true)
-)
-);
-
-await interaction.update({
-components: [disabledRow]
-});
-
-const applyChannel = guild.channels.cache.get(APPLY_CHANNEL_ID);
-
-if (roleType === "waiting" && applyChannel) {
-
-await interaction.followUp({
-content: `📋 가입 신청은 여기에서 진행해주세요 → ${applyChannel}`,
-ephemeral: true
-});
-
-}
-
-}
-
-
 // ===== 제보 생성 =====
 
 if (interaction.customId === "report_create") {
 
 const staffRole = guild.roles.cache.find(r => r.name === STAFF_ROLE_NAME);
-
-const existing = guild.channels.cache.find(
-c => c.name === `report-${interaction.user.id}`
-);
-
-if (existing) {
-return interaction.reply({
-content: `이미 제보 채널이 있습니다 → ${existing}`,
-ephemeral: true
-});
-}
 
 const reportChannel = await guild.channels.create({
 name: `report-${interaction.user.id}`,
@@ -325,48 +264,72 @@ PermissionsBitField.Flags.SendMessages
 });
 
 const row = new ActionRowBuilder().addComponents(
+
 new ButtonBuilder()
 .setCustomId("report_close")
 .setLabel("🔒 제보 종료")
-.setStyle(ButtonStyle.Secondary)
+.setStyle(ButtonStyle.Secondary),
+
+new ButtonBuilder()
+.setCustomId("report_cancel")
+.setLabel("❌ 제보 취소")
+.setStyle(ButtonStyle.Danger)
+
 );
 
 reportChannel.send({
-content: `${interaction.user} | ${staffRole}\n제보 내용을 작성해주세요.`,
+content: `${interaction.user} 님의 제보 채널입니다.`,
 components: [row]
 });
 
 interaction.reply({
-content: `✅ 제보 채널이 생성되었습니다 → ${reportChannel}`,
+content: `✅ 제보 채널 생성 → ${reportChannel}`,
 ephemeral: true
 });
 
 }
 
 
-// ===== 제보 종료 =====
+// ===== 제보 종료 / 취소 =====
 
-if (interaction.customId === "report_close") {
-
-if (!interaction.member.roles.cache.some(r => r.name === STAFF_ROLE_NAME)) {
-return interaction.reply({
-content: "❌ 운영진만 종료할 수 있습니다.",
-ephemeral: true
-});
-}
+if (interaction.customId === "report_close" || interaction.customId === "report_cancel") {
 
 const logChannel = guild.channels.cache.get(REPORT_LOG_CHANNEL_ID);
 
-if (logChannel) {
+const messages = await interaction.channel.messages.fetch({ limit: 100 });
 
-const embed = new EmbedBuilder()
-.setTitle("📜 제보 종료")
-.setDescription(`채널: ${interaction.channel.name}`)
-.setTimestamp();
+let logText = "";
 
-logChannel.send({ embeds: [embed] });
+messages.reverse().forEach(msg => {
+
+const time = msg.createdAt.toLocaleTimeString("ko-KR", {
+timeZone: "Asia/Seoul",
+hour12: false
+});
+
+logText += `[${time}] ${msg.author.username} : ${msg.content}\n`;
+
+if (msg.attachments.size > 0) {
+
+msg.attachments.forEach(file => {
+logText += `[첨부파일] ${file.url}\n`;
+});
 
 }
+
+});
+
+const embed = new EmbedBuilder()
+.setTitle("📜 제보 로그")
+.addFields(
+{ name: "채널", value: interaction.channel.name },
+{ name: "종료자", value: interaction.user.username },
+{ name: "종료시간", value: getKST() }
+)
+.setDescription(logText.substring(0,4000))
+.setTimestamp();
+
+if (logChannel) logChannel.send({ embeds: [embed] });
 
 interaction.channel.delete();
 
