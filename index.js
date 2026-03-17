@@ -20,13 +20,8 @@ const client = new Client({
 intents: [
 GatewayIntentBits.Guilds,
 GatewayIntentBits.GuildMembers,
-GatewayIntentBits.GuildMessages,
-GatewayIntentBits.MessageContent
+GatewayIntentBits.GuildMessages
 ]
-});
-
-client.once("ready", () => {
-console.log(`✅ 로그인됨: ${client.user.tag}`);
 });
 
 
@@ -40,6 +35,48 @@ const REPORT_CATEGORY_ID = "1461907310493564938";
 const REPORT_LOG_CHANNEL_ID = "1483510318196985856";
 
 const STAFF_ROLE_NAME = "707Manager";
+
+
+// =========================
+// 봇 실행
+// =========================
+
+client.once("ready", async () => {
+
+console.log(`✅ 로그인됨: ${client.user.tag}`);
+
+const reportChannel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
+
+if (!reportChannel) {
+console.log("❌ 제보 채널을 찾을 수 없음");
+return;
+}
+
+// 기존 버튼 메시지 제거 (중복 방지)
+
+const messages = await reportChannel.messages.fetch({ limit: 10 });
+
+messages.forEach(msg => {
+if (msg.author.id === client.user.id) msg.delete().catch(()=>{});
+});
+
+// 새 버튼 생성
+
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("report_create")
+.setLabel("📩 제보하기")
+.setStyle(ButtonStyle.Danger)
+);
+
+reportChannel.send({
+content: "문제가 발생했거나 제보가 필요하면 버튼을 눌러주세요.",
+components: [row]
+});
+
+console.log("✅ 제보 버튼 생성 완료");
+
+});
 
 
 // =========================
@@ -175,30 +212,6 @@ components: [row]
 
 
 // =========================
-// 제보 버튼 메시지 자동 생성
-// =========================
-
-client.on("ready", async () => {
-
-const channel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
-if (!channel) return;
-
-const row = new ActionRowBuilder().addComponents(
-new ButtonBuilder()
-.setCustomId("report_create")
-.setLabel("📩 제보하기")
-.setStyle(ButtonStyle.Danger)
-);
-
-channel.send({
-content: "문제가 발생했거나 제보가 필요하면 버튼을 눌러주세요.",
-components: [row]
-});
-
-});
-
-
-// =========================
 // 버튼 처리
 // =========================
 
@@ -284,8 +297,8 @@ ephemeral: true
 });
 }
 
-const channel = await guild.channels.create({
-name: `report-${interaction.user.username}`,
+const reportChannel = await guild.channels.create({
+name: `report-${interaction.user.id}`,
 type: ChannelType.GuildText,
 parent: REPORT_CATEGORY_ID,
 permissionOverwrites: [
@@ -318,13 +331,13 @@ new ButtonBuilder()
 .setStyle(ButtonStyle.Secondary)
 );
 
-channel.send({
+reportChannel.send({
 content: `${interaction.user} | ${staffRole}\n제보 내용을 작성해주세요.`,
 components: [row]
 });
 
 interaction.reply({
-content: `✅ 제보 채널이 생성되었습니다 → ${channel}`,
+content: `✅ 제보 채널이 생성되었습니다 → ${reportChannel}`,
 ephemeral: true
 });
 
