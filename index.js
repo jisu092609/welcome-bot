@@ -5,7 +5,10 @@ AttachmentBuilder,
 ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
-Events
+EmbedBuilder,
+Events,
+PermissionsBitField,
+ChannelType
 } = require("discord.js");
 
 const Canvas = require("canvas");
@@ -16,7 +19,9 @@ Canvas.registerFont("./assets/SUIT-Bold.ttf", { family: "SUITB" });
 const client = new Client({
 intents: [
 GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMembers
+GatewayIntentBits.GuildMembers,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent
 ]
 });
 
@@ -25,33 +30,35 @@ console.log(`✅ 로그인됨: ${client.user.tag}`);
 });
 
 
-// 🔥 채널 ID 설정
+// ===== 설정 =====
+
 const WELCOME_CHANNEL_ID = "1479184071761592340";
 const APPLY_CHANNEL_ID = "1462180691713458289";
 
+const REPORT_BUTTON_CHANNEL_ID = "1483509928449671168";
+const REPORT_CATEGORY_ID = "1461907310493564938";
+const REPORT_LOG_CHANNEL_ID = "1483510318196985856";
+
+const STAFF_ROLE_NAME = "707Manager";
+
+
+// =========================
+// 환영 시스템
+// =========================
 
 client.on("guildMemberAdd", async (member) => {
 
 if (member.user.bot) return;
 
-
-// 환영 채널
 const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-
 if (!channel) return;
 
-
-// 캔버스
 const canvas = Canvas.createCanvas(1600, 800);
 const ctx = canvas.getContext("2d");
 
-
-// 배경
 const background = await Canvas.loadImage("./assets/background.png");
 ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-
-// 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
 
 const frameWidth = 1500;
@@ -62,8 +69,6 @@ const frameY = (canvas.height - frameHeight) / 2 + 40;
 
 ctx.drawImage(frame, frameX, frameY, frameWidth, frameHeight);
 
-
-// 로고
 const logo = await Canvas.loadImage("./assets/logo.png");
 
 ctx.drawImage(
@@ -74,8 +79,6 @@ frameY - 110,
 180
 );
 
-
-// 아바타
 const avatar = await Canvas.loadImage(
 member.user.displayAvatarURL({ extension: "png", size: 256 })
 );
@@ -85,8 +88,6 @@ const avatarSize = 230;
 const avatarX = frameX + 340;
 const avatarY = frameY + frameHeight / 2;
 
-
-// 네온 테두리
 ctx.beginPath();
 ctx.arc(avatarX, avatarY, avatarSize/2 + 8, 0, Math.PI * 2);
 ctx.strokeStyle = "#9c6cff";
@@ -95,8 +96,6 @@ ctx.shadowColor = "#9c6cff";
 ctx.shadowBlur = 20;
 ctx.stroke();
 
-
-// 아바타
 ctx.save();
 ctx.beginPath();
 ctx.arc(avatarX, avatarY, avatarSize/2, 0, Math.PI * 2);
@@ -113,59 +112,28 @@ avatarSize
 
 ctx.restore();
 
-
-// 텍스트 그림자
 ctx.shadowColor = "rgba(0,0,0,0.9)";
 ctx.shadowBlur = 18;
-ctx.shadowOffsetX = 0;
-ctx.shadowOffsetY = 3;
 
-
-// 텍스트 위치
 const textX = avatarX + 250;
 const textY = avatarY - 100;
 
-
-// 닉네임
 ctx.font = "56px SUITB";
 ctx.fillStyle = "#ffffff";
-ctx.strokeStyle = "rgba(0,0,0,0.6)";
-ctx.lineWidth = 2;
 
-ctx.strokeText(`${member.user.username}님 안녕하세요!`, textX, textY);
 ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, textY);
 
-
-// 환영 문구
 ctx.font = "40px SUITB";
-
-ctx.strokeText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 
-
-// 정보
 ctx.font = "30px SUITB";
-ctx.fillStyle = "#f5f5ff";
 
-ctx.strokeText(`ID : ${member.user.id}`, textX, textY + 150);
 ctx.fillText(`ID : ${member.user.id}`, textX, textY + 150);
 
-ctx.strokeText(
-`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
-textX,
-textY + 190
-);
-
 ctx.fillText(
 `Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
 textX,
 textY + 190
-);
-
-ctx.strokeText(
-`서버 가입 : ${new Date().toLocaleDateString()}`,
-textX,
-textY + 230
 );
 
 ctx.fillText(
@@ -174,14 +142,10 @@ textX,
 textY + 230
 );
 
-
-// 이미지 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
 name: "welcome.png"
 });
 
-
-// 버튼
 const row = new ActionRowBuilder().addComponents(
 
 new ButtonBuilder()
@@ -201,7 +165,6 @@ new ButtonBuilder()
 
 );
 
-
 channel.send({
 content: `${member} 님 환영합니다!\n역할을 먼저 선택해주세요.`,
 files: [attachment],
@@ -211,15 +174,51 @@ components: [row]
 });
 
 
+// =========================
+// 제보 버튼 메시지 자동 생성
+// =========================
+
+client.on("ready", async () => {
+
+const channel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
+if (!channel) return;
+
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("report_create")
+.setLabel("📩 제보하기")
+.setStyle(ButtonStyle.Danger)
+);
+
+channel.send({
+content: "문제가 발생했거나 제보가 필요하면 버튼을 눌러주세요.",
+components: [row]
+});
+
+});
+
+
+// =========================
 // 버튼 처리
+// =========================
+
 client.on(Events.InteractionCreate, async interaction => {
 
 if (!interaction.isButton()) return;
 
+const guild = interaction.guild;
+
+
+// ===== 역할 선택 =====
+
+if (
+interaction.customId.startsWith("mercenary_") ||
+interaction.customId.startsWith("guest_") ||
+interaction.customId.startsWith("waiting_")
+) {
+
 const [roleType, userId] = interaction.customId.split("_");
 
-
-// 새 유저만 사용
 if (interaction.user.id !== userId) {
 return interaction.reply({
 content: "❌ 이 버튼은 새로 들어온 사용자만 사용할 수 있습니다.",
@@ -227,16 +226,13 @@ ephemeral: true
 });
 }
 
-
-// 역할
 let roleName = "";
 
 if (roleType === "mercenary") roleName = "용병";
 if (roleType === "guest") roleName = "손님";
 if (roleType === "waiting") roleName = "가입희망자";
 
-
-const role = interaction.guild.roles.cache.find(r => r.name === roleName);
+const role = guild.roles.cache.find(r => r.name === roleName);
 
 if (!role) {
 return interaction.reply({
@@ -245,31 +241,8 @@ ephemeral: true
 });
 }
 
-
-// 이미 선택
-const rolesToCheck = ["용병","손님","가입희망자"];
-
-for (const r of rolesToCheck) {
-
-const checkRole = interaction.guild.roles.cache.find(x => x.name === r);
-
-if (checkRole && interaction.member.roles.cache.has(checkRole.id)) {
-
-return interaction.reply({
-content: "⚠️ 이미 역할을 선택했습니다.",
-ephemeral: true
-});
-
-}
-
-}
-
-
-// 역할 지급
 await interaction.member.roles.add(role);
 
-
-// 버튼 비활성화
 const disabledRow = new ActionRowBuilder().addComponents(
 interaction.message.components[0].components.map(button =>
 ButtonBuilder.from(button).setDisabled(true)
@@ -280,18 +253,109 @@ await interaction.update({
 components: [disabledRow]
 });
 
+const applyChannel = guild.channels.cache.get(APPLY_CHANNEL_ID);
 
-// 신청서 채널
-const applyChannel = interaction.guild.channels.cache.get(APPLY_CHANNEL_ID);
-
-
-// 가입희망자 안내
 if (roleType === "waiting" && applyChannel) {
 
 await interaction.followUp({
 content: `📋 가입 신청은 여기에서 진행해주세요 → ${applyChannel}`,
 ephemeral: true
 });
+
+}
+
+}
+
+
+// ===== 제보 생성 =====
+
+if (interaction.customId === "report_create") {
+
+const staffRole = guild.roles.cache.find(r => r.name === STAFF_ROLE_NAME);
+
+const existing = guild.channels.cache.find(
+c => c.name === `report-${interaction.user.id}`
+);
+
+if (existing) {
+return interaction.reply({
+content: `이미 제보 채널이 있습니다 → ${existing}`,
+ephemeral: true
+});
+}
+
+const channel = await guild.channels.create({
+name: `report-${interaction.user.username}`,
+type: ChannelType.GuildText,
+parent: REPORT_CATEGORY_ID,
+permissionOverwrites: [
+{
+id: guild.roles.everyone,
+deny: [PermissionsBitField.Flags.ViewChannel]
+},
+{
+id: interaction.user.id,
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages,
+PermissionsBitField.Flags.AttachFiles
+]
+},
+{
+id: staffRole.id,
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
+}
+]
+});
+
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("report_close")
+.setLabel("🔒 제보 종료")
+.setStyle(ButtonStyle.Secondary)
+);
+
+channel.send({
+content: `${interaction.user} | ${staffRole}\n제보 내용을 작성해주세요.`,
+components: [row]
+});
+
+interaction.reply({
+content: `✅ 제보 채널이 생성되었습니다 → ${channel}`,
+ephemeral: true
+});
+
+}
+
+
+// ===== 제보 종료 =====
+
+if (interaction.customId === "report_close") {
+
+if (!interaction.member.roles.cache.some(r => r.name === STAFF_ROLE_NAME)) {
+return interaction.reply({
+content: "❌ 운영진만 종료할 수 있습니다.",
+ephemeral: true
+});
+}
+
+const logChannel = guild.channels.cache.get(REPORT_LOG_CHANNEL_ID);
+
+if (logChannel) {
+
+const embed = new EmbedBuilder()
+.setTitle("📜 제보 종료")
+.setDescription(`채널: ${interaction.channel.name}`)
+.setTimestamp();
+
+logChannel.send({ embeds: [embed] });
+
+}
+
+interaction.channel.delete();
 
 }
 
