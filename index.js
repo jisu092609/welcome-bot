@@ -75,7 +75,7 @@ components: [row]
 });
 
 // =========================
-// 환영 시스템 (수정 완료)
+// 환영 시스템 (🔥 원래 디자인 유지)
 // =========================
 
 client.on("guildMemberAdd", async (member) => {
@@ -94,45 +94,117 @@ ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
 // 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
-ctx.drawImage(frame, 50, 100, 1500, 600);
+
+const frameWidth = 1500;
+const frameHeight = 650;
+
+const frameX = (canvas.width - frameWidth) / 2;
+const frameY = (canvas.height - frameHeight) / 2 + 40;
+
+ctx.drawImage(frame, frameX, frameY, frameWidth, frameHeight);
 
 // 로고
 const logo = await Canvas.loadImage("./assets/logo.png");
-ctx.drawImage(logo, 600, 0, 400, 200);
+
+ctx.drawImage(
+logo,
+canvas.width / 2 - 180,
+frameY - 110,
+360,
+180
+);
 
 // 아바타
 const avatar = await Canvas.loadImage(
 member.user.displayAvatarURL({ extension: "png", size: 256 })
 );
 
+const avatarSize = 230;
+
+const avatarX = frameX + 340;
+const avatarY = frameY + frameHeight / 2;
+
+// 네온 테두리
+ctx.beginPath();
+ctx.arc(avatarX, avatarY, avatarSize/2 + 8, 0, Math.PI * 2);
+ctx.strokeStyle = "#9c6cff";
+ctx.lineWidth = 6;
+ctx.shadowColor = "#9c6cff";
+ctx.shadowBlur = 20;
+ctx.stroke();
+
+// 아바타
 ctx.save();
 ctx.beginPath();
-ctx.arc(400, 400, 120, 0, Math.PI * 2);
+ctx.arc(avatarX, avatarY, avatarSize/2, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
 
-ctx.drawImage(avatar, 280, 280, 240, 240);
+ctx.drawImage(
+avatar,
+avatarX - avatarSize/2,
+avatarY - avatarSize/2,
+avatarSize,
+avatarSize
+);
+
 ctx.restore();
 
-// 🔥 텍스트 설정 (핵심)
+// 🔥 텍스트 다시 설정 (핵심 수정)
 ctx.shadowColor = "rgba(0,0,0,0.9)";
-ctx.shadowBlur = 15;
-ctx.fillStyle = "#ffffff";
-ctx.textAlign = "left";
+ctx.shadowBlur = 18;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 3;
+
+// 텍스트 위치
+const textX = avatarX + 250;
+const textY = avatarY - 100;
 
 // 닉네임
-ctx.font = "50px SUITB";
-ctx.fillText(`${member.user.username}님 안녕하세요!`, 600, 350);
+ctx.font = "56px SUITB";
+ctx.fillStyle = "#ffffff";
+ctx.strokeStyle = "rgba(0,0,0,0.6)";
+ctx.lineWidth = 2;
+
+ctx.strokeText(`${member.user.username}님 안녕하세요!`, textX, textY);
+ctx.fillText(`${member.user.username}님 안녕하세요!`, textX, textY);
 
 // 환영 문구
-ctx.font = "36px SUITB";
-ctx.fillText("707 서버에 오신걸 환영합니다", 600, 420);
+ctx.font = "40px SUITB";
+
+ctx.strokeText("707 서버에 오신걸 환영합니다", textX, textY + 70);
+ctx.fillText("707 서버에 오신걸 환영합니다", textX, textY + 70);
 
 // 정보
-ctx.font = "26px SUIT";
-ctx.fillText(`ID : ${member.user.id}`, 600, 500);
-ctx.fillText(`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`, 600, 540);
-ctx.fillText(`서버 가입 : ${new Date().toLocaleDateString()}`, 600, 580);
+ctx.font = "30px SUITB";
+ctx.fillStyle = "#f5f5ff";
+
+ctx.strokeText(`ID : ${member.user.id}`, textX, textY + 150);
+ctx.fillText(`ID : ${member.user.id}`, textX, textY + 150);
+
+ctx.strokeText(
+`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
+textX,
+textY + 190
+);
+
+ctx.fillText(
+`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`,
+textX,
+textY + 190
+);
+
+ctx.strokeText(
+`서버 가입 : ${new Date().toLocaleDateString()}`,
+textX,
+textY + 230
+);
+
+ctx.fillText(
+`서버 가입 : ${new Date().toLocaleDateString()}`,
+textX,
+textY + 230
+);
 
 // 이미지 생성
 const attachment = new AttachmentBuilder(canvas.toBuffer(), {
@@ -220,7 +292,7 @@ ButtonBuilder.from(btn).setDisabled(true)
 
 await interaction.update({ components: [disabledRow] });
 
-// 추가 안내
+// 가입희망자 안내
 if (roleType === "waiting") {
 const applyChannel = guild.channels.cache.get(APPLY_CHANNEL_ID);
 if (applyChannel) {
