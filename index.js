@@ -26,7 +26,6 @@ GatewayIntentBits.MessageContent
 });
 
 // ===== 설정 =====
-
 const WELCOME_CHANNEL_ID = "1479184071761592340";
 const APPLY_CHANNEL_ID = "1462180691713458289";
 
@@ -55,13 +54,12 @@ console.log(`✅ 로그인됨: ${client.user.tag}`);
 const reportChannel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
 if (!reportChannel) return;
 
-// 기존 메시지 제거
 const messages = await reportChannel.messages.fetch({ limit: 10 });
+
 messages.forEach(msg => {
 if (msg.author.id === client.user.id) msg.delete().catch(()=>{});
 });
 
-// 버튼 생성
 const row = new ActionRowBuilder().addComponents(
 new ButtonBuilder()
 .setCustomId("report_create")
@@ -77,7 +75,7 @@ components: [row]
 });
 
 // =========================
-// 환영 시스템
+// 환영 시스템 (수정 완료)
 // =========================
 
 client.on("guildMemberAdd", async (member) => {
@@ -90,56 +88,58 @@ if (!channel) return;
 const canvas = Canvas.createCanvas(1600, 800);
 const ctx = canvas.getContext("2d");
 
+// 배경
 const background = await Canvas.loadImage("./assets/background.png");
 ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
+// 프레임
 const frame = await Canvas.loadImage("./assets/frame.png");
+ctx.drawImage(frame, 50, 100, 1500, 600);
 
-const frameWidth = 1500;
-const frameHeight = 650;
-
-const frameX = (canvas.width - frameWidth) / 2;
-const frameY = (canvas.height - frameHeight) / 2 + 40;
-
-ctx.drawImage(frame, frameX, frameY, frameWidth, frameHeight);
-
+// 로고
 const logo = await Canvas.loadImage("./assets/logo.png");
+ctx.drawImage(logo, 600, 0, 400, 200);
 
-ctx.drawImage(logo, canvas.width/2 - 180, frameY - 110, 360, 180);
-
+// 아바타
 const avatar = await Canvas.loadImage(
 member.user.displayAvatarURL({ extension: "png", size: 256 })
 );
 
-const avatarSize = 230;
-const avatarX = frameX + 340;
-const avatarY = frameY + frameHeight / 2;
-
+ctx.save();
 ctx.beginPath();
-ctx.arc(avatarX, avatarY, avatarSize/2, 0, Math.PI*2);
+ctx.arc(400, 400, 120, 0, Math.PI * 2);
 ctx.closePath();
 ctx.clip();
 
-ctx.drawImage(
-avatar,
-avatarX - avatarSize/2,
-avatarY - avatarSize/2,
-avatarSize,
-avatarSize
-);
-
+ctx.drawImage(avatar, 280, 280, 240, 240);
 ctx.restore();
 
-ctx.font = "56px SUITB";
+// 🔥 텍스트 설정 (핵심)
+ctx.shadowColor = "rgba(0,0,0,0.9)";
+ctx.shadowBlur = 15;
 ctx.fillStyle = "#ffffff";
+ctx.textAlign = "left";
 
-ctx.fillText(`${member.user.username}님 안녕하세요!`, avatarX+250, avatarY-100);
+// 닉네임
+ctx.font = "50px SUITB";
+ctx.fillText(`${member.user.username}님 안녕하세요!`, 600, 350);
 
-ctx.font = "40px SUITB";
-ctx.fillText("707 서버에 오신걸 환영합니다", avatarX+250, avatarY-30);
+// 환영 문구
+ctx.font = "36px SUITB";
+ctx.fillText("707 서버에 오신걸 환영합니다", 600, 420);
 
-const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: "welcome.png" });
+// 정보
+ctx.font = "26px SUIT";
+ctx.fillText(`ID : ${member.user.id}`, 600, 500);
+ctx.fillText(`Discord 가입 : ${member.user.createdAt.toLocaleDateString()}`, 600, 540);
+ctx.fillText(`서버 가입 : ${new Date().toLocaleDateString()}`, 600, 580);
 
+// 이미지 생성
+const attachment = new AttachmentBuilder(canvas.toBuffer(), {
+name: "welcome.png"
+});
+
+// 버튼
 const row = new ActionRowBuilder().addComponents(
 
 new ButtonBuilder()
@@ -177,9 +177,7 @@ if (!interaction.isButton()) return;
 
 const guild = interaction.guild;
 
-// =========================
-// 역할 선택
-// =========================
+// ===== 역할 선택 =====
 
 if (
 interaction.customId.startsWith("mercenary_") ||
@@ -189,7 +187,6 @@ interaction.customId.startsWith("waiting_")
 
 const [roleType, userId] = interaction.customId.split("_");
 
-// 다른 유저 차단
 if (interaction.user.id !== userId) {
 return interaction.reply({
 content: "❌ 이 버튼은 해당 사용자만 사용할 수 있습니다.",
@@ -236,9 +233,7 @@ ephemeral: true
 
 }
 
-// =========================
-// 제보 생성
-// =========================
+// ===== 제보 생성 =====
 
 if (interaction.customId === "report_create") {
 
@@ -273,13 +268,12 @@ content: `✅ 제보 채널 생성 → ${reportChannel}`
 
 }
 
-// =========================
-// 제보 종료 / 취소
-// =========================
+// ===== 제보 종료 =====
 
 if (interaction.customId === "report_close" || interaction.customId === "report_cancel") {
 
 const logChannel = guild.channels.cache.get(REPORT_LOG_CHANNEL_ID);
+
 const messages = await interaction.channel.messages.fetch({ limit: 100 });
 
 let logText = "";
