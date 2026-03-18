@@ -227,7 +227,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
 if (!interaction.isButton()) return;
 
+// 🔥 상호작용 실패 방지 (추가)
+await interaction.deferUpdate();
+
 const guild = interaction.guild;
+
+
 
 
 // ===== 제보 생성 =====
