@@ -1,6 +1,6 @@
-// 🔥 안정화
-process.on("unhandledRejection", err => console.error(err));
-process.on("uncaughtException", err => console.error(err));
+// 🔥 안정화 (봇 안죽게)
+process.on("unhandledRejection", err => console.error("❌", err));
+process.on("uncaughtException", err => console.error("❌", err));
 
 const {
   Client,
@@ -24,10 +24,12 @@ const client = new Client({
 });
 
 // ===== 설정 =====
-const DM_PANEL_CHANNEL_ID = "1485636420532961451";
-const LOG_CHANNEL_ID = "1485645421245239478";
-const DELAY = 1000;
+const DM_PANEL_CHANNEL_ID = "패널채널ID";
+const LOG_CHANNEL_ID = "로그채널ID";
+
 const TIMEOUT = 120000;
+const BATCH_SIZE = 5;
+const DELAY = 1000;
 
 let dmData = {};
 let activeSession = null;
@@ -38,7 +40,7 @@ let timeoutMap = {};
 // =========================
 
 client.once("ready", async () => {
-  console.log("봇 실행됨");
+  console.log("✅ 봇 실행됨");
 
   const ch = await client.channels.fetch(DM_PANEL_CHANNEL_ID);
 
@@ -65,8 +67,7 @@ function startTimeout(userId, channel) {
   timeoutMap[userId] = setTimeout(() => {
     delete dmData[userId];
     activeSession = null;
-
-    channel.send("⏰ 작업이 자동 취소됨");
+    channel.send("⏰ 작업이 자동 취소되었습니다.");
   }, TIMEOUT);
 }
 
@@ -75,13 +76,12 @@ function startTimeout(userId, channel) {
 // =========================
 
 client.on(Events.InteractionCreate, async interaction => {
-
   try {
 
-    // 🔒 다른 관리자 차단
+    // 🔒 작업중 차단
     if (activeSession && interaction.user.id !== activeSession) {
       return interaction.reply({
-        content: "❌ 다른 관리자가 사용 중",
+        content: "❌ 다른 관리자가 사용 중입니다.",
         ephemeral: true
       });
     }
@@ -92,7 +92,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isButton() && interaction.customId === "dm_start") {
 
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        return interaction.reply({ content: "관리자만 가능", ephemeral: true });
+        return interaction.reply({ content: "❌ 관리자만 가능", ephemeral: true });
       }
 
       activeSession = interaction.user.id;
@@ -100,7 +100,6 @@ client.on(Events.InteractionCreate, async interaction => {
 
       startTimeout(interaction.user.id, interaction.channel);
 
-      // 🔥 모달 열기
       const modal = new ModalBuilder()
         .setCustomId("dm_modal")
         .setTitle("DM 메시지 입력");
@@ -126,7 +125,6 @@ client.on(Events.InteractionCreate, async interaction => {
 
       startTimeout(interaction.user.id, interaction.channel);
 
-      // 역할 선택
       const roles = interaction.guild.roles.cache
         .filter(r => r.name !== "@everyone")
         .sort((a, b) => b.position - a.position)
@@ -168,7 +166,6 @@ client.on(Events.InteractionCreate, async interaction => {
           .setCustomId(`dm_confirm_${interaction.user.id}`)
           .setLabel("✅ 발송")
           .setStyle(ButtonStyle.Success),
-
         new ButtonBuilder()
           .setCustomId(`dm_cancel_${interaction.user.id}`)
           .setLabel("❌ 취소")
@@ -176,13 +173,13 @@ client.on(Events.InteractionCreate, async interaction => {
       );
 
       return interaction.update({
-        content: `📨 확인\n\n내용:\n${dmData[interaction.user.id].content}\n\n대상:\n${role.name}`,
+        content: `📨 확인\n\n내용:\n${dmData[interaction.user.id].content}\n\n대상:\n${role.name} (${role.members.size}명)`,
         components: [row]
       });
     }
 
     // =====================
-    // 발송
+    // 발송 (최적화 버전)
     // =====================
     if (interaction.isButton() && interaction.customId.startsWith("dm_confirm_")) {
 
@@ -193,24 +190,50 @@ client.on(Events.InteractionCreate, async interaction => {
 
       const data = dmData[interaction.user.id];
 
-      await interaction.reply({ content: "🚀 발송 중...", ephemeral: true });
+      await interaction.reply({ content: "🚀 발송 시작...", ephemeral: true });
 
       await interaction.guild.members.fetch();
 
+      const members = Array.from(data.role.members.values());
+
       let success = 0;
       let fail = 0;
+      let failList = [];
 
-      for (const member of data.role.members.values()) {
-        try {
-          await member.send(data.content);
-          success++;
-          await new Promise(r => setTimeout(r, DELAY));
-        } catch {
-          fail++;
+      for (let i = 0; i < members.length; i += BATCH_SIZE) {
+
+        const batch = members.slice(i, i + BATCH_SIZE);
+
+        await Promise.all(
+          batch.map(async (member) => {
+            try {
+              await member.send(data.content);
+              success++;
+            } catch {
+              fail++;
+              failList.push(member.user.tag);
+            }
+          })
+        );
+
+        await interaction.editReply({
+          content: `🚀 발송중...\n${success + fail} / ${members.length}`
+        });
+
+        await new Promise(r => setTimeout(r, DELAY));
+      }
+
+      let result = `✅ 완료\n성공: ${success}\n실패: ${fail}`;
+
+      if (failList.length > 0) {
+        result += `\n\n❌ 실패 유저:\n${failList.slice(0, 20).join("\n")}`;
+        if (failList.length > 20) {
+          result += `\n...외 ${failList.length - 20}명`;
         }
       }
 
-      // 🔥 로그 채널
+      await interaction.editReply({ content: result });
+
       const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
 
       logChannel.send({
@@ -226,11 +249,6 @@ ${data.content}
 성공: ${success}
 실패: ${fail}
 `
-      });
-
-      await interaction.followUp({
-        content: `✅ 완료\n성공:${success} 실패:${fail}`,
-        ephemeral: true
       });
 
       delete dmData[interaction.user.id];
@@ -257,7 +275,7 @@ ${data.content}
     }
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ 에러:", err);
   }
 });
 
