@@ -24,8 +24,8 @@ const client = new Client({
 });
 
 // ===== 설정 =====
-const DM_PANEL_CHANNEL_ID = "패널채널ID";
-const LOG_CHANNEL_ID = "로그채널ID";
+const DM_PANEL_CHANNEL_ID = "1485636420532961451";
+const LOG_CHANNEL_ID = "1485645421245239478";
 const DELAY = 1000;
 const TIMEOUT = 120000;
 
