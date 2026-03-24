@@ -24,7 +24,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent // ⭐ 제보용 추가
+    GatewayIntentBits.MessageContent
   ]
 });
 
@@ -39,7 +39,7 @@ const REPORT_LOG_CHANNEL_ID = "1483510318196985856";
 const STAFF_ROLE_NAME = "707Manager";
 
 // ⭐ DM 로그 채널
-const DM_LOG_CHANNEL_ID = "여기에_로그채널_ID";
+const DM_LOG_CHANNEL_ID = "1485645421245239478";
 
 // ===== DM =====
 const DM_PANEL_CHANNEL_ID = "1485636420532961451";
@@ -59,7 +59,6 @@ client.once("ready", async () => {
 
   console.log("✅ 봇 실행됨");
 
-  // 제보 버튼
   const reportChannel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
   if (reportChannel) {
     reportChannel.send({
@@ -75,7 +74,6 @@ client.once("ready", async () => {
     });
   }
 
-  // DM 패널
   const dmChannel = client.channels.cache.get(DM_PANEL_CHANNEL_ID);
   if (dmChannel) {
     dmChannel.send({
@@ -132,18 +130,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
 
-    // =========================
-    // 🎭 역할 선택
-    // =========================
-
-    if (
-      interaction.isButton() &&
-      (
-        interaction.customId.startsWith("mercenary_") ||
-        interaction.customId.startsWith("guest_") ||
-        interaction.customId.startsWith("waiting_")
-      )
-    ) {
+    // 역할 선택
+    if (interaction.isButton() && (
+      interaction.customId.startsWith("mercenary_") ||
+      interaction.customId.startsWith("guest_") ||
+      interaction.customId.startsWith("waiting_")
+    )) {
 
       const [roleType, userId] = interaction.customId.split("_");
 
@@ -151,17 +143,15 @@ client.on(Events.InteractionCreate, async interaction => {
         return interaction.reply({ content: "❌ 본인만 가능", ephemeral: true });
       }
 
-      let roleName = "";
-      if (roleType === "mercenary") roleName = "용병";
-      if (roleType === "guest") roleName = "손님";
-      if (roleType === "waiting") roleName = "가입희망자";
+      let roleName = roleType === "mercenary" ? "용병"
+        : roleType === "guest" ? "손님"
+        : "가입희망자";
 
       const role = interaction.guild.roles.cache.find(r => r.name === roleName);
       if (!role) return interaction.reply({ content: "❌ 역할 없음", ephemeral: true });
 
       await interaction.member.roles.add(role);
 
-      // 버튼 비활성화
       const disabledRow = new ActionRowBuilder().addComponents(
         interaction.message.components[0].components.map(btn =>
           ButtonBuilder.from(btn).setDisabled(true)
@@ -170,9 +160,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await interaction.update({ components: [disabledRow] });
 
-      // ⭐ 가입희망자 버튼
       if (roleType === "waiting") {
-
         const applyButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setLabel("📋 가입 신청하러 가기")
@@ -189,7 +177,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // =========================
-    // 📩 제보 생성
+    // 제보 생성
     // =========================
 
     if (interaction.isButton() && interaction.customId === "report_create") {
@@ -225,34 +213,86 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // =========================
-    // 📜 제보 종료 + 로그
+    // 🔥 제보 로그 (최종 완성)
     // =========================
 
-    if (
-      interaction.isButton() &&
+    if (interaction.isButton() &&
       (interaction.customId === "report_close" || interaction.customId === "report_cancel")
     ) {
 
+      await interaction.deferReply({ ephemeral: true });
+
       const logChannel = interaction.guild.channels.cache.get(REPORT_LOG_CHANNEL_ID);
+      const staffRole = interaction.guild.roles.cache.find(r => r.name === STAFF_ROLE_NAME);
+
       const messages = await interaction.channel.messages.fetch({ limit: 100 });
+
+      const createdAt = interaction.channel.createdAt;
+      const closedAt = new Date();
 
       let logText = "";
 
       messages.reverse().forEach(msg => {
-        logText += `[${getTime()}] ${msg.author.username}: ${msg.content}\n`;
+
+        const time = msg.createdAt.toLocaleTimeString("ko-KR", {
+          timeZone: "Asia/Seoul",
+          hour12: false
+        });
+
+        logText += `[${time}] ${msg.author.username}: ${msg.content || "(내용 없음)"}\n`;
+
+        if (msg.attachments.size > 0) {
+          msg.attachments.forEach(file => {
+            logText += `📎 ${file.url}\n`;
+          });
+        }
       });
 
+      const txtFile = new AttachmentBuilder(
+        Buffer.from(logText, "utf-8"),
+        { name: `report-log-${interaction.channel.name}.txt` }
+      );
+
       const embed = new EmbedBuilder()
-        .setTitle("📜 제보 로그")
-        .setDescription(logText.substring(0, 4000));
+        .setTitle("📜 제보 상세 로그")
+        .addFields(
+          { name: "📌 제보자", value: interaction.channel.name, inline: true },
+          { name: "🧑 종료자", value: interaction.user.username, inline: true },
+          { name: "📂 종료 유형", value: interaction.customId === "report_close" ? "정상 종료" : "취소" },
 
-      if (logChannel) logChannel.send({ embeds: [embed] });
+          { name: "🕒 시작", value: createdAt.toLocaleString("ko-KR") },
+          { name: "🕒 종료", value: closedAt.toLocaleString("ko-KR") },
+          { name: "🕒 클릭 시간", value: getTime() }
+        );
 
-      await interaction.channel.delete();
+      if (logChannel) {
+        await logChannel.send({
+          content: staffRole ? `<@&${staffRole.id}>` : "",
+          embeds: [embed],
+          files: [txtFile]
+        });
+
+        // 이미지 미리보기
+        messages.forEach(msg => {
+          msg.attachments.forEach(file => {
+            if (file.contentType?.startsWith("image")) {
+              logChannel.send({
+                embeds: [new EmbedBuilder().setImage(file.url)]
+              });
+            }
+          });
+        });
+      }
+
+      await interaction.editReply({ content: "📜 로그 저장 완료" });
+
+      setTimeout(() => {
+        interaction.channel.delete().catch(() => {});
+      }, 1500);
     }
 
     // =========================
-    // 📩 DM 시스템 (그대로 유지)
+    // DM 시스템 (유지)
     // =========================
 
     if (interaction.isButton() && interaction.customId === "dm_start") {
