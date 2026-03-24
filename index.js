@@ -16,11 +16,6 @@ const {
   TextInputStyle
 } = require("discord.js");
 
-const Canvas = require("canvas");
-
-Canvas.registerFont("./assets/SUIT-Regular.ttf", { family: "SUIT" });
-Canvas.registerFont("./assets/SUIT-Bold.ttf", { family: "SUITB" });
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
