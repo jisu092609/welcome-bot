@@ -28,6 +28,9 @@ const client = new Client({
 const WELCOME_CHANNEL_ID = "1479184071761592340";
 const DM_PANEL_CHANNEL_ID = "1485636420532961451";
 
+// ⭐ 여기 바꿔라 (가입신청서 채널 링크)
+const APPLY_CHANNEL_URL = "https://discord.com/channels/서버ID/채널ID";
+
 const TIMEOUT = 120000;
 const BATCH_SIZE = 5;
 const DELAY = 1000;
@@ -94,22 +97,22 @@ client.once("ready", async () => {
 });
 
 // =========================
-// 🎉 환영카드 (원본 유지)
+// 🎉 환영카드
 // =========================
 
 client.on("guildMemberAdd", async (member) => {
- console.log("🔥 유저 입장 감지:", member.user.tag);
+  console.log("🔥 유저 입장 감지:", member.user.tag);
 
   if (member.user.bot) return;
 
   const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
   if (!channel) return;
 
-const avatar = member.user.displayAvatarURL({ extension: "png" });
+  const avatar = member.user.displayAvatarURL({ extension: "png" });
 
-const imageUrl = `https://welcome-server-production.up.railway.app/welcome?username=${encodeURIComponent(member.user.username)}&avatar=${encodeURIComponent(avatar)}&id=${member.user.id}&created=${encodeURIComponent(member.user.createdAt.toLocaleDateString())}&joined=${encodeURIComponent(member.joinedAt.toLocaleDateString())}`;
+  const imageUrl = `https://welcome-server-production.up.railway.app/welcome?username=${encodeURIComponent(member.user.username)}&avatar=${encodeURIComponent(avatar)}&id=${member.user.id}&created=${encodeURIComponent(member.user.createdAt.toLocaleDateString())}&joined=${encodeURIComponent(member.joinedAt.toLocaleDateString())}`;
 
-const attachment = new AttachmentBuilder(imageUrl, { name: "welcome.png" });
+  const attachment = new AttachmentBuilder(imageUrl, { name: "welcome.png" });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`mercenary_${member.id}`).setLabel("⚔️ 용병").setStyle(ButtonStyle.Primary),
@@ -117,11 +120,11 @@ const attachment = new AttachmentBuilder(imageUrl, { name: "welcome.png" });
     new ButtonBuilder().setCustomId(`waiting_${member.id}`).setLabel("⏳ 가입희망자").setStyle(ButtonStyle.Success)
   );
 
-await channel.send({
-  content: `${member} 환영합니다!`,
-  files: [attachment],
-  components: [row]
-});
+  await channel.send({
+    content: `${member} 환영합니다!`,
+    files: [attachment],
+    components: [row]
+  });
 });
 
 // =========================
@@ -132,7 +135,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
 
-    // ===== 환영카드 버튼 =====
+    // ===== 역할 버튼 =====
     if (interaction.isButton() &&
       (interaction.customId.startsWith("mercenary_") ||
        interaction.customId.startsWith("guest_") ||
@@ -152,12 +155,28 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await interaction.member.roles.add(role);
 
-      // 🔥 버튼 비활성화
+      // 버튼 비활성화
       const disabledRow = new ActionRowBuilder().addComponents(
         interaction.message.components[0].components.map(btn =>
           ButtonBuilder.from(btn).setDisabled(true)
         )
       );
+
+      // ⭐ 가입희망자 기능 추가
+      if (type === "waiting") {
+        const moveButton = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel("📄 가입신청서 작성하러 가기")
+            .setStyle(ButtonStyle.Link)
+            .setURL("https://discord.com/channels/886997213266464848/1462180691713458289")
+        );
+
+        await interaction.reply({
+          content: "📌 가입희망자는 가입신청서를 작성해주세요!",
+          components: [moveButton],
+          ephemeral: true
+        });
+      }
 
       return interaction.update({
         content: "✅ 역할이 지급되었습니다.",
