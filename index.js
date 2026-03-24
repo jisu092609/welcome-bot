@@ -28,9 +28,6 @@ const client = new Client({
 const WELCOME_CHANNEL_ID = "1479184071761592340";
 const DM_PANEL_CHANNEL_ID = "1485636420532961451";
 
-// ⭐ 여기 바꿔라 (가입신청서 채널 링크)
-const APPLY_CHANNEL_URL = "https://discord.com/channels/서버ID/채널ID";
-
 const TIMEOUT = 120000;
 const BATCH_SIZE = 5;
 const DELAY = 1000;
@@ -68,24 +65,6 @@ async function updatePanel(channel, state = "idle", user = "", progress = "") {
 }
 
 // =========================
-// 타임아웃
-// =========================
-
-function startTimeout(userId) {
-  if (timeoutMap[userId]) clearTimeout(timeoutMap[userId]);
-
-  timeoutMap[userId] = setTimeout(async () => {
-    delete dmData[userId];
-    activeSession = null;
-    delete timeoutMap[userId];
-
-    const ch = await client.channels.fetch(DM_PANEL_CHANNEL_ID);
-    updatePanel(ch, "idle");
-
-  }, TIMEOUT);
-}
-
-// =========================
 // READY
 // =========================
 
@@ -101,7 +80,6 @@ client.once("ready", async () => {
 // =========================
 
 client.on("guildMemberAdd", async (member) => {
-  console.log("🔥 유저 입장 감지:", member.user.tag);
 
   if (member.user.bot) return;
 
@@ -162,8 +140,15 @@ client.on(Events.InteractionCreate, async interaction => {
         )
       );
 
-      // ⭐ 가입희망자 기능 추가
+      // ⭐ 먼저 버튼 업데이트
+      await interaction.update({
+        content: "✅ 역할이 지급되었습니다.",
+        components: [disabledRow]
+      });
+
+      // ⭐ 가입희망자 메시지 (ephemeral)
       if (type === "waiting") {
+
         const moveButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setLabel("📄 가입신청서 작성하러 가기")
@@ -171,164 +156,14 @@ client.on(Events.InteractionCreate, async interaction => {
             .setURL("https://discord.com/channels/886997213266464848/1462180691713458289")
         );
 
-        await interaction.reply({
+        await interaction.followUp({
           content: "📌 가입희망자는 가입신청서를 작성해주세요!",
           components: [moveButton],
           ephemeral: true
         });
       }
 
-      return interaction.update({
-        content: "✅ 역할이 지급되었습니다.",
-        components: [disabledRow]
-      });
-    }
-
-    // ===== DM 시작 =====
-    if (interaction.isButton() && interaction.customId === "dm_start") {
-
-      if (activeSession && interaction.user.id !== activeSession) {
-        return interaction.reply({ content: "❌ 사용중", ephemeral: true });
-      }
-
-      activeSession = interaction.user.id;
-      dmData[interaction.user.id] = {};
-
-      startTimeout(interaction.user.id);
-      updatePanel(interaction.channel, "working", interaction.user.tag);
-
-      const modal = new ModalBuilder()
-        .setCustomId("dm_modal")
-        .setTitle("DM 내용 입력");
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId("dm_content")
-            .setLabel("내용")
-            .setStyle(TextInputStyle.Paragraph)
-        )
-      );
-
-      return interaction.showModal(modal);
-    }
-
-    // ===== DM 입력 =====
-    if (interaction.isModalSubmit() && interaction.customId === "dm_modal") {
-
-      const content = interaction.fields.getTextInputValue("dm_content");
-      dmData[interaction.user.id].content = content;
-
-      const roles = interaction.guild.roles.cache
-        .filter(r => r.name !== "@everyone")
-        .map(r => ({ label: r.name, value: r.id }))
-        .slice(0, 25);
-
-      return interaction.reply({
-        content: "🎭 역할 선택",
-        components: [
-          new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-              .setCustomId(`dm_role_${interaction.user.id}`)
-              .addOptions(roles)
-          )
-        ],
-        ephemeral: true
-      });
-    }
-
-    // ===== 역할 선택 =====
-    if (interaction.isStringSelectMenu() && interaction.customId.startsWith("dm_role_")) {
-
-      const ownerId = interaction.customId.split("_")[2];
-
-      if (interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ 본인만 가능", ephemeral: true });
-      }
-
-      const role = interaction.guild.roles.cache.get(interaction.values[0]);
-      dmData[interaction.user.id].role = role;
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`dm_confirm_${interaction.user.id}`).setLabel("✅ 발송").setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`dm_cancel_${interaction.user.id}`).setLabel("❌ 취소").setStyle(ButtonStyle.Danger)
-      );
-
-      return interaction.update({
-        content: `📨 확인\n대상: ${role.name}`,
-        components: [row]
-      });
-    }
-
-    // ===== 발송 =====
-    if (interaction.isButton() && interaction.customId.startsWith("dm_confirm_")) {
-
-      const ownerId = interaction.customId.split("_")[2];
-      if (interaction.user.id !== ownerId) {
-        return interaction.reply({ content: "❌ 권한 없음", ephemeral: true });
-      }
-
-      const data = dmData[interaction.user.id];
-
-      await interaction.reply({ content: "🚀 발송 시작", ephemeral: true });
-
-      await interaction.guild.members.fetch();
-      const members = Array.from(data.role.members.values());
-
-      let success = 0;
-      let fail = 0;
-
-      for (let i = 0; i < members.length; i += BATCH_SIZE) {
-
-        const batch = members.slice(i, i + BATCH_SIZE);
-
-        await Promise.all(
-          batch.map(async (member) => {
-            try {
-              await member.send(data.content);
-              success++;
-            } catch {
-              fail++;
-            }
-          })
-        );
-
-        updatePanel(interaction.channel, "sending", interaction.user.tag, `${success+fail}/${members.length}`);
-        await new Promise(r => setTimeout(r, DELAY));
-      }
-
-      await interaction.editReply(`✅ 완료\n성공:${success} 실패:${fail}`);
-
-      if (timeoutMap[interaction.user.id]) {
-        clearTimeout(timeoutMap[interaction.user.id]);
-        delete timeoutMap[interaction.user.id];
-      }
-
-      delete dmData[interaction.user.id];
-      activeSession = null;
-
-      updatePanel(interaction.channel, "idle");
-    }
-
-    // ===== 취소 =====
-    if (interaction.isButton() && interaction.customId.startsWith("dm_cancel_")) {
-
-      const userId = interaction.customId.split("_")[2];
-
-      if (timeoutMap[userId]) {
-        clearTimeout(timeoutMap[userId]);
-        delete timeoutMap[userId];
-      }
-
-      delete dmData[userId];
-      activeSession = null;
-
-      updatePanel(interaction.channel, "idle");
-
-      return interaction.update({
-        content: "❌ 취소됨",
-        components: []
-      });
+      return;
     }
 
   } catch (err) {
