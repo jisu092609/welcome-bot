@@ -58,22 +58,6 @@ client.once("ready", async () => {
 
   console.log("✅ 봇 실행됨");
 
-  // 제보 버튼
-  const reportChannel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
-  if (reportChannel) {
-    reportChannel.send({
-      content: "문제가 있으면 제보해주세요.",
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId("report_create")
-            .setLabel("📩 제보하기")
-            .setStyle(ButtonStyle.Danger)
-        )
-      ]
-    });
-  }
-
   // DM 패널
   const dmChannel = client.channels.cache.get(DM_PANEL_CHANNEL_ID);
   if (dmChannel) {
@@ -93,37 +77,6 @@ client.once("ready", async () => {
 });
 
 // =========================
-// 🎉 환영카드
-// =========================
-
-client.on("guildMemberAdd", async (member) => {
-
-  if (member.user.bot) return;
-
-  const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-  if (!channel) return;
-
-  const avatar = member.user.displayAvatarURL({ extension: "png" });
-
-  const imageUrl = `https://welcome-server-production.up.railway.app/welcome?username=${encodeURIComponent(member.user.username)}&avatar=${encodeURIComponent(avatar)}&id=${member.user.id}&created=${encodeURIComponent(member.user.createdAt.toLocaleDateString())}&joined=${encodeURIComponent(member.joinedAt.toLocaleDateString())}`;
-
-  const attachment = new AttachmentBuilder(imageUrl, { name: "welcome.png" });
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`mercenary_${member.id}`).setLabel("⚔️ 용병").setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`guest_${member.id}`).setLabel("👤 손님").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`waiting_${member.id}`).setLabel("⏳ 가입희망자").setStyle(ButtonStyle.Success)
-  );
-
-  await channel.send({
-    content: `${member} 환영합니다!`,
-    files: [attachment],
-    components: [row]
-  });
-
-});
-
-// =========================
 // 인터랙션
 // =========================
 
@@ -131,12 +84,11 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
 
+    // 🔥 버튼 아니면 무시 (중요)
+    if (!interaction.isButton() && !interaction.isModalSubmit() && !interaction.isStringSelectMenu()) return;
+
     // ===== DM 시작 =====
     if (interaction.isButton() && interaction.customId === "dm_start") {
-
-      if (activeSession && interaction.user.id !== activeSession) {
-        return interaction.reply({ content: "❌ 사용중", ephemeral: true });
-      }
 
       activeSession = interaction.user.id;
       dmData[interaction.user.id] = {};
@@ -237,7 +189,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await interaction.editReply(`✅ 완료\n성공:${success} 실패:${fail}`);
 
-      // ⭐ 로그 생성
+      // 로그
       const logChannel = interaction.guild.channels.cache.get(DM_LOG_CHANNEL_ID);
 
       if (logChannel) {
