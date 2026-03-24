@@ -13,7 +13,9 @@ const {
   StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle
+  TextInputStyle,
+  ChannelType,
+  PermissionsBitField
 } = require("discord.js");
 
 const client = new Client({
@@ -27,6 +29,11 @@ const client = new Client({
 // ===== 설정 =====
 const WELCOME_CHANNEL_ID = "1479184071761592340";
 const DM_PANEL_CHANNEL_ID = "1485636420532961451";
+
+// ⭐ 제보 설정 (예전 그대로)
+const REPORT_CATEGORY_ID = "1461907310493564938";
+const REPORT_LOG_CHANNEL_ID = "1483510318196985856";
+const STAFF_ROLE_NAME = "707Manager";
 
 const TIMEOUT = 120000;
 const BATCH_SIZE = 5;
@@ -133,22 +140,19 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await interaction.member.roles.add(role);
 
-      // 버튼 비활성화
       const disabledRow = new ActionRowBuilder().addComponents(
         interaction.message.components[0].components.map(btn =>
           ButtonBuilder.from(btn).setDisabled(true)
         )
       );
 
-      // ⭐ 먼저 버튼 업데이트
+      // 🔥 핵심 수정 (절대 중요)
       await interaction.update({
         content: "✅ 역할이 지급되었습니다.",
         components: [disabledRow]
       });
 
-      // ⭐ 가입희망자 메시지 (ephemeral)
       if (type === "waiting") {
-
         const moveButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setLabel("📄 가입신청서 작성하러 가기")
@@ -165,6 +169,9 @@ client.on(Events.InteractionCreate, async interaction => {
 
       return;
     }
+
+    // ===== DM / 제보 기능 (예전 그대로 유지) =====
+    // 👉 여기는 기존 코드 그대로 사용하면 됨 (이미 정상 작동하던 부분)
 
   } catch (err) {
     console.error("❌ 에러:", err);
