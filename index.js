@@ -393,6 +393,26 @@ client.on(Events.InteractionCreate, async interaction => {
 
       await interaction.editReply(`✅ 완료\n성공:${success} 실패:${fail}`);
 
+// ⭐ DM 로그
+const logChannel = interaction.guild.channels.cache.get(DM_LOG_CHANNEL_ID);
+
+if (!logChannel) {
+  console.log("❌ DM 로그 채널 못찾음");
+} else {
+  const embed = new EmbedBuilder()
+    .setTitle("📨 DM 발송 로그")
+    .addFields(
+      { name: "관리자", value: interaction.user.username },
+      { name: "시간", value: getTime() },
+      { name: "대상 역할", value: data.role.name },
+      { name: "대상 인원", value: `${members.length}명` },
+      { name: "성공", value: `${success}명`, inline: true },
+      { name: "실패", value: `${fail}명`, inline: true },
+      { name: "내용", value: data.content.substring(0, 1000) }
+    );
+
+  await logChannel.send({ embeds: [embed] });
+}
       delete dmData[interaction.user.id];
       activeSession = null;
     }
