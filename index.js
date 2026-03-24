@@ -109,20 +109,11 @@ client.on("guildMemberAdd", async (member) => {
   const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
   if (!channel) return;
 
-  const canvas = Canvas.createCanvas(1600, 800);
-  const ctx = canvas.getContext("2d");
+const avatar = member.user.displayAvatarURL({ extension: "png" });
 
-  const bg = await Canvas.loadImage("./assets/background.png");
-  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+const imageUrl = `https://welcome-server-production.up.railway.app/welcome?username=${encodeURIComponent(member.user.username)}&avatar=${encodeURIComponent(avatar)}&id=${member.user.id}&created=${encodeURIComponent(member.user.createdAt.toLocaleDateString())}&joined=${encodeURIComponent(member.joinedAt.toLocaleDateString())}`;
 
-  const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: "png" }));
-  ctx.drawImage(avatar, 200, 200, 300, 300);
-
-  ctx.font = "50px SUITB";
-  ctx.fillStyle = "#fff";
-  ctx.fillText(`${member.user.username}님 환영합니다`, 600, 400);
-
-  const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: "welcome.png" });
+const attachment = new AttachmentBuilder(imageUrl, { name: "welcome.png" });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`mercenary_${member.id}`).setLabel("⚔️ 용병").setStyle(ButtonStyle.Primary),
@@ -130,11 +121,11 @@ client.on("guildMemberAdd", async (member) => {
     new ButtonBuilder().setCustomId(`waiting_${member.id}`).setLabel("⏳ 가입희망자").setStyle(ButtonStyle.Success)
   );
 
-  channel.send({
-    content: `${member} 환영합니다!`,
-    files: [attachment],
-    components: [row]
-  });
+await channel.send({
+  content: `${member} 환영합니다!`,
+  files: [attachment],
+  components: [row]
+});
 });
 
 // =========================
