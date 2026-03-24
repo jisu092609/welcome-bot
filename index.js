@@ -103,6 +103,7 @@ client.once("ready", async () => {
 // =========================
 
 client.on("guildMemberAdd", async (member) => {
+ console.log("🔥 유저 입장 감지:", member.user.tag);
 
   if (member.user.bot) return;
 
