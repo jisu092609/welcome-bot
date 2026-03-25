@@ -104,8 +104,7 @@ client.on("guildMemberAdd", async (member) => {
 
   const avatar = member.user.displayAvatarURL({ extension: "png" });
 
-  const imageUrl = `https://welcome-server-production.up.railway.app/welcome?username=${encodeURIComponent(member.user.username)}&avatar=${encodeURIComponent(avatar)}&id=${member.user.id}`;
-
+const imageUrl = `https://welcome-server-production.up.railway.app/welcome?username=${encodeURIComponent(member.user.username)}&avatar=${encodeURIComponent(avatar)}&id=${member.user.id}&created=${encodeURIComponent(member.user.createdAt.toLocaleDateString())}&joined=${encodeURIComponent(member.joinedAt?.toLocaleDateString() || "Unknown")}`;
   const attachment = new AttachmentBuilder(imageUrl, { name: "welcome.png" });
 
   const row = new ActionRowBuilder().addComponents(
