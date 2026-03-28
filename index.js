@@ -62,7 +62,11 @@ client.once("ready", async () => {
   const reportChannel = client.channels.cache.get(REPORT_BUTTON_CHANNEL_ID);
   if (reportChannel) {
     reportChannel.send({
-      content: "문제가 있으면 제보해주세요.",
+      content: `📢 **제보 안내**
+문제나 건의사항이 있으시면 아래 버튼을 눌러주세요.
+
+🔒 제보는 비공개 채널로 생성되며
+운영진과 제보자만 확인할 수 있습니다.`,
       components: [
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
