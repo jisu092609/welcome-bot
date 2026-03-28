@@ -263,9 +263,9 @@ client.on(Events.InteractionCreate, async interaction => {
           { name: "🧑 종료자", value: interaction.user.username, inline: true },
           { name: "📂 종료 유형", value: interaction.customId === "report_close" ? "정상 종료" : "취소" },
 
-          { name: "🕒 시작", value: createdAt.toLocaleString("ko-KR") },
-          { name: "🕒 종료", value: closedAt.toLocaleString("ko-KR") },
-          { name: "🕒 클릭 시간", value: getTime() }
+         { name: "🕒 시작", value: createdAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) },
+         { name: "🕒 종료", value: closedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) },         
+         { name: "🕒 클릭 시간", value: getTime() }
         );
 
       if (logChannel) {
