@@ -46,7 +46,7 @@ const DM_PANEL_CHANNEL_ID = "1485636420532961451";
 let dmData = {};
 let activeSession = null;
 
-// ⭐ 패널 메시지 저장
+// ⭐ 패널 메시지 저장12
 let dmPanelMessage = null;
 
 // ===== 시간 =====
