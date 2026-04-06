@@ -49,6 +49,9 @@ let activeSession = null;
 // ⭐ 패널 메시지 저장12
 let dmPanelMessage = null;
 
+// ⭐ 타임아웃 추가
+let dmTimeout = null;
+
 // ===== 시간 =====
 function getTime() {
   return new Date().toLocaleString("ko-KR", {
@@ -57,7 +60,7 @@ function getTime() {
   });
 }
 
-// ⭐ 패널 업데이트 함수
+// ⭐ 패널 업데이트 함수 (버튼 추가)
 async function updateDmPanel(statusText) {
   if (!dmPanelMessage) return;
 
@@ -68,7 +71,11 @@ async function updateDmPanel(statusText) {
         new ButtonBuilder()
           .setCustomId("dm_start")
           .setLabel("📩 DM 발송시작")
-          .setStyle(ButtonStyle.Primary)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId("dm_cancel")
+          .setLabel("❌ 사용 취소")
+          .setStyle(ButtonStyle.Danger)
       )
     ]
   });
@@ -107,7 +114,11 @@ client.once("ready", async () => {
           new ButtonBuilder()
             .setCustomId("dm_start")
             .setLabel("📩 DM 발송시작")
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId("dm_cancel")
+            .setLabel("❌ 사용 취소")
+            .setStyle(ButtonStyle.Danger)
         )
       ]
     });
@@ -153,6 +164,23 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
 
+    // ===== 취소 버튼 (추가) =====
+    if (interaction.isButton() && interaction.customId === "dm_cancel") {
+
+      if (activeSession && interaction.user.id !== activeSession) {
+        return interaction.reply({ content: "❌ 다른 관리자가 사용중", ephemeral: true });
+      }
+
+      activeSession = null;
+      dmData = {};
+
+      if (dmTimeout) clearTimeout(dmTimeout);
+
+      await updateDmPanel("🟢 상태: 대기중");
+
+      return interaction.reply({ content: "✅ 취소 완료", ephemeral: true });
+    }
+
     // DM 시작
     if (interaction.isButton() && interaction.customId === "dm_start") {
 
@@ -160,7 +188,16 @@ client.on(Events.InteractionCreate, async interaction => {
         return interaction.reply({ content: "❌ 사용중", ephemeral: true });
       }
 
+      activeSession = interaction.user.id;
+
       await updateDmPanel(`🔴 상태: 사용중 (${interaction.user.username})`);
+
+      // ⭐ 타임아웃 시작
+      dmTimeout = setTimeout(async () => {
+        activeSession = null;
+        dmData = {};
+        await updateDmPanel("🟢 상태: 대기중");
+      }, 5 * 60 * 1000);
 
       const modal = new ModalBuilder()
         .setCustomId("dm_modal")
@@ -183,8 +220,6 @@ client.on(Events.InteractionCreate, async interaction => {
       if (activeSession && interaction.user.id !== activeSession) {
         return interaction.reply({ content: "❌ 사용중", ephemeral: true });
       }
-
-      activeSession = interaction.user.id; // ✅ 여기로 이동
 
       dmData[interaction.user.id] = {};
 
@@ -279,6 +314,8 @@ client.on(Events.InteractionCreate, async interaction => {
 
       delete dmData[interaction.user.id];
       activeSession = null;
+
+      if (dmTimeout) clearTimeout(dmTimeout);
 
       await updateDmPanel("🟢 상태: 대기중");
     }
