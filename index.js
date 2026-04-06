@@ -164,7 +164,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
 
-    // ===== 취소 버튼 (추가) =====
+    // ===== 취소 버튼 (추1가) =====
     if (interaction.isButton() && interaction.customId === "dm_cancel") {
 
       if (activeSession && interaction.user.id !== activeSession) {
