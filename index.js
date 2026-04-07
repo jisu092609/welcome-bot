@@ -164,6 +164,52 @@ client.on(Events.InteractionCreate, async interaction => {
 
   try {
 
+// ===== 환영카드 역할 선택 =====
+if (interaction.isButton() && (
+  interaction.customId.startsWith("mercenary_") ||
+  interaction.customId.startsWith("guest_") ||
+  interaction.customId.startsWith("waiting_")
+)) {
+
+  const [roleType, userId] = interaction.customId.split("_");
+
+  if (interaction.user.id !== userId) {
+    return interaction.reply({ content: "❌ 본인만 가능", ephemeral: true });
+  }
+
+  let roleName = roleType === "mercenary" ? "용병"
+    : roleType === "guest" ? "손님"
+    : "가입희망자";
+
+  const role = interaction.guild.roles.cache.find(r => r.name === roleName);
+  if (!role) return interaction.reply({ content: "❌ 역할 없음", ephemeral: true });
+
+  await interaction.member.roles.add(role);
+
+  const disabledRow = new ActionRowBuilder().addComponents(
+    interaction.message.components[0].components.map(btn =>
+      ButtonBuilder.from(btn).setDisabled(true)
+    )
+  );
+
+  await interaction.update({ components: [disabledRow] });
+
+  if (roleType === "waiting") {
+    const applyButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("📋 가입 신청하러 가기")
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${interaction.guild.id}/${APPLY_CHANNEL_ID}`)
+    );
+
+    await interaction.followUp({
+      content: "아래 버튼을 눌러 가입 신청을 진행해주세요.",
+      components: [applyButton],
+      ephemeral: true
+    });
+  }
+}
+
     // ===== 취소 버튼 (추1가) =====
     if (interaction.isButton() && interaction.customId === "dm_cancel") {
 
