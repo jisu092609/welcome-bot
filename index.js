@@ -210,6 +210,77 @@ if (interaction.isButton() && (
   }
 }
 
+// ===== 제보 생성 =====
+if (interaction.isButton() && interaction.customId === "report_create") {
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const staffRole = interaction.guild.roles.cache.find(r => r.name === STAFF_ROLE_NAME);
+
+  const reportChannel = await interaction.guild.channels.create({
+    name: `report-${interaction.user.id}`,
+    type: ChannelType.GuildText,
+    parent: REPORT_CATEGORY_ID,
+    permissionOverwrites: [
+      { id: interaction.guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+      { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+      { id: staffRole.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+    ]
+  });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId("report_close").setLabel("🔒 종료").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId("report_cancel").setLabel("❌ 취소").setStyle(ButtonStyle.Danger)
+  );
+
+  await reportChannel.send({
+    content: `${interaction.user} 제보 채널`,
+    components: [row]
+  });
+
+  await interaction.editReply({
+    content: `✅ 생성됨 → ${reportChannel}`
+  });
+}
+
+// ===== 제보 종료 + 로그 =====
+if (interaction.isButton() &&
+ (interaction.customId === "report_close" || interaction.customId === "report_cancel")
+) {
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const logChannel = interaction.guild.channels.cache.get(REPORT_LOG_CHANNEL_ID);
+  const staffRole = interaction.guild.roles.cache.find(r => r.name === STAFF_ROLE_NAME);
+
+  const messages = await interaction.channel.messages.fetch({ limit: 100 });
+
+  let logText = "";
+
+  messages.reverse().forEach(msg => {
+    logText += `[${msg.author.username}] ${msg.content || "(내용 없음)"}\n`;
+    msg.attachments.forEach(file => logText += `📎 ${file.url}\n`);
+  });
+
+  const txtFile = new AttachmentBuilder(
+    Buffer.from(logText, "utf-8"),
+    { name: `report-log-${interaction.channel.name}.txt` }
+  );
+
+  if (logChannel) {
+    await logChannel.send({
+      content: staffRole ? `<@&${staffRole.id}>` : "",
+      files: [txtFile]
+    });
+  }
+
+  await interaction.editReply({ content: "📜 로그 저장 완료" });
+
+  setTimeout(() => {
+    interaction.channel.delete().catch(() => {});
+  }, 1500);
+}
+
     // ===== 취소 버튼 (추1가) =====
     if (interaction.isButton() && interaction.customId === "dm_cancel") {
 
