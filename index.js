@@ -255,6 +255,9 @@ if (interaction.isButton() &&
 
   const messages = await interaction.channel.messages.fetch({ limit: 100 });
 
+  const createdAt = interaction.channel.createdAt;
+  const closedAt = new Date();
+
   let logText = "";
 
   messages.reverse().forEach(msg => {
@@ -267,10 +270,34 @@ if (interaction.isButton() &&
     { name: `report-log-${interaction.channel.name}.txt` }
   );
 
+  // 🔥 추가된 임베드 로그
+  const embed = new EmbedBuilder()
+    .setTitle("📜 제보 상세 로그")
+    .addFields(
+      { name: "📌 제보자", value: interaction.channel.name, inline: true },
+      { name: "🧑 종료자", value: interaction.user.username, inline: true },
+      { name: "📂 종료 유형", value: interaction.customId === "report_close" ? "정상 종료" : "취소" },
+      { name: "🕒 시작", value: createdAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) },
+      { name: "🕒 종료", value: closedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) },
+      { name: "🕒 클릭 시간", value: getTime() }
+    );
+
   if (logChannel) {
     await logChannel.send({
       content: staffRole ? `<@&${staffRole.id}>` : "",
+      embeds: [embed], // 🔥 추가
       files: [txtFile]
+    });
+
+    // 🔥 이미지 미리보기 복구 (원래 기능)
+    messages.forEach(msg => {
+      msg.attachments.forEach(file => {
+        if (file.contentType?.startsWith("image")) {
+          logChannel.send({
+            embeds: [new EmbedBuilder().setImage(file.url)]
+          });
+        }
+      });
     });
   }
 
@@ -279,9 +306,9 @@ if (interaction.isButton() &&
   setTimeout(() => {
     interaction.channel.delete().catch(() => {});
   }, 1500);
-}
+}   
 
-    // ===== 취소 버튼 (추1가) =====
+ // ===== 취소 버튼 (추1가) =====
     if (interaction.isButton() && interaction.customId === "dm_cancel") {
 
       if (activeSession && interaction.user.id !== activeSession) {
