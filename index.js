@@ -157,6 +157,43 @@ const imageUrl = `https://welcome-server-production.up.railway.app/welcome?usern
 });
 
 // =========================
+// 🆕 신규 유저 DM 자동 발송 (추가된 기능)
+// =========================
+
+client.on("guildMemberAdd", async (member) => {
+
+  if (member.user.bot) return;
+
+  try {
+   await member.send(`
+🎉 **707TEAM 클랜** 🎉  
+
+👋 서버 방문을 환영합니다!
+
+👉 아래 링크에서 역할선택 먼저 진행해주세요!
+https://discord.com/channels/886997213266464848/1479184071761592340
+(역할 선택을 하지 않을 시 서버에서 추방될 수 있습니다.)
+━━━━━━━━━━━━━━━
+
+📌 가입희망자 안내
+
+1️⃣ [가입신청서 작성](https://discord.com/channels/886997213266464848/1462180691713458289)  
+2️⃣ [TEST 프로필 변경](https://discord.com/channels/886997213266464848/1461896972708352010/1492855092951515166)  
+
+➡️ 완료해주시면 운영진이 확인 후 DM드리겠습니다.
+
+━━━━━━━━━━━━━━━
+
+❓ 문의사항은 운영진중 아무나 DM주시면 답변드리겠습니다.
+`); 
+
+ } catch (err) {
+    console.log(`❌ 신규 유저 DM 실패: ${member.user.tag}`);
+  }
+
+});
+
+// =========================
 // 인터랙션
 // =========================
 
